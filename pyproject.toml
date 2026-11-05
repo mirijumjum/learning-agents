@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-lab"
+version = "0.1.0"
+description = "A tiny CLI to learn Microsoft Agent Framework: agents + workflows that write, test and run code."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "agent-framework-core>=1.24.0",
+    "agent-framework-openai>=1.18.0",
+    # pytest is a *runtime* dependency: the runner agent uses it to execute generated tests.
+    "pytest>=8.0",
+]
+
+[project.optional-dependencies]
+anthropic = ["agent-framework-anthropic>=1.0.0b0"]
+
+[project.scripts]
+agent-lab = "agent_lab.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

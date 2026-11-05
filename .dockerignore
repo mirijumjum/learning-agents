@@ -1,0 +1,8 @@
+.venv/
+.git/
+workspace/
+build/
+**/__pycache__/
+*.egg-info/
+.env
+tests/
