@@ -13,13 +13,30 @@ dependencies = [
     "agent-framework-openai>=1.18.0",
     # pytest is a *runtime* dependency: the runner agent uses it to execute generated tests.
     "pytest>=8.0",
+    # DevAssist: Teams hosting, GitLab and configuration
+    "microsoft-agents-hosting-aiohttp>=1.9.0",
+    "microsoft-agents-authentication-msal>=1.9.0",
+    "microsoft-agents-activity>=1.9.0",
+    "aiohttp>=3.10",
+    "httpx>=0.27",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0",
+    "tzdata; sys_platform == 'win32'",
 ]
 
 [project.optional-dependencies]
 anthropic = ["agent-framework-anthropic>=1.0.0b0"]
+# Only needed once DevAssist runs against Azure.
+azure = ["azure-identity>=1.17", "azure-monitor-query>=1.4", "azure-monitor-opentelemetry>=1.6"]
+# pytest-cov lets the local GitLab stand-in report real coverage.
+dev = ["pytest-cov>=5.0", "jsonschema>=4.0", "pillow>=10.0"]
 
 [project.scripts]
 agent-lab = "agent_lab.cli:main"
+devassist = "devassist.cli:main"
+
+[tool.setuptools.package-data]
+devassist = ["instructions/*.md", "eval_cases.yaml", "app_package/*.png"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

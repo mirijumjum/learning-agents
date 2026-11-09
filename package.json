@@ -1,0 +1,11 @@
+{
+  "name": "devassist-local-tools",
+  "private": true,
+  "description": "Microsoft 365 Agents Playground: a free local stand-in for Teams.",
+  "scripts": {
+    "playground": "agentsplayground -e http://localhost:3978/api/messages -c msteams"
+  },
+  "devDependencies": {
+    "@microsoft/m365agentsplayground": "0.2.30"
+  }
+}

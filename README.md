@@ -27,6 +27,10 @@ and run them**, looping back with feedback until the tests pass.
 4. **quality_gate** (plain Python, no LLM) finishes if the tests pass, or sends the failure back to the coder
    (up to `--max-attempts`, default 3).
 
+> **New: DevAssist.** An orchestrator plus test, docs, Git and trace agents for development teams, used from
+> Microsoft Teams. It runs free on Ollama and is ready to move to Azure OpenAI (GPT-5), Teams and Microsoft 365 Copilot.
+> See [docs/DEVASSIST.md](docs/DEVASSIST.md).
+
 ## Table of contents
 
 - [Quick start](#quick-start)

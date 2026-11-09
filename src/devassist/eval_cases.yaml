@@ -1,0 +1,43 @@
+# Sample requests that must keep working. Taken from the design guide's table.
+# Run before each release: devassist eval --profile ollama
+- id: test-generation-from-mr
+  request: Generate unit tests for `OrderService` in MR !231 of `payments-api`
+  route: test
+  contains: ["tests added", "passing", "merge_requests/"]
+  expect: {project: acme/payments-api, ai_mr: true}
+
+- id: test-detects-real-bug
+  # MR !232 divides the discount by 10 instead of 100. Tests must not be bent to fit it.
+  request: Generate unit tests for MR !232 of `payments-api`
+  route: test
+  contains: ["bug in the code"]
+  not_contains: ["tests added"]
+
+- id: docs-api-reference
+  request: Document the public endpoints of `customer-portal` and open an MR
+  route: docs
+  contains: ["docs/api.md", "merge_requests/"]
+  expect: {project: acme/customer-portal, ai_mr: true}
+
+- id: git-branch-and-list
+  request: Create a branch `feature/invoice-pdf` from `develop` in `payments-api` and list open MRs assigned to me
+  route: git
+  contains: ["feature/invoice-pdf", "!231"]
+  not_contains: ["gitlab.example.com"]
+  expect: {project: acme/payments-api, branch: feature/invoice-pdf}
+
+- id: trace-incident
+  request: Why did checkout fail yesterday between 17:00 and 18:00 in `payments-api`?
+  route: trace
+  contains: ["49 errors", "42x", "Suggested fix"]
+  not_contains: ["jane.doe", "10.0.4."]
+
+- id: trace-pipeline
+  request: "Why is pipeline #5512 of `payments-api` red?"
+  route: trace
+  contains: ["unit-tests", "Suggested fix"]
+
+- id: help
+  request: Hello, what can you do?
+  route: help
+  contains: ["DevAssist"]

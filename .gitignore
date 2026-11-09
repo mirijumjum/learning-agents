@@ -3,5 +3,11 @@ __pycache__/
 *.egg-info/
 workspace/
 .env
+.env.devassist
+.devassist/
+node_modules/
+devTools/
+dist/
+.coverage
 build/
 .pytest_cache/

@@ -1,0 +1,13 @@
+# DevAssist web service. Generated tests never run here: they run on your GitLab runners.
+FROM python:3.11-slim
+
+WORKDIR /app
+COPY pyproject.toml README.md ./
+COPY src ./src
+RUN pip install --no-cache-dir ".[azure]"
+
+RUN useradd --create-home devassist
+USER devassist
+
+EXPOSE 3978
+ENTRYPOINT ["devassist", "serve", "--host", "0.0.0.0", "--port", "3978"]

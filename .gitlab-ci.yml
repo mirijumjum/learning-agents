@@ -1,0 +1,11 @@
+# Agent instructions and tools change only through reviewed MRs.
+# This gate must pass first: the project's tests plus the sample-request set.
+release-gate:
+  image: python:3.11-slim
+  script:
+    - pip install -e ".[dev]"
+    - python -m pytest -q
+    - devassist eval --profile mock
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
