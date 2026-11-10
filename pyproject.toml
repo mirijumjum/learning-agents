@@ -29,11 +29,12 @@ anthropic = ["agent-framework-anthropic>=1.0.0b0"]
 # Only needed once DevAssist runs against Azure.
 azure = ["azure-identity>=1.17", "azure-monitor-query>=1.4", "azure-monitor-opentelemetry>=1.6"]
 # pytest-cov lets the local GitLab stand-in report real coverage.
-dev = ["pytest-cov>=5.0", "jsonschema>=4.0", "pillow>=10.0"]
+dev = ["pytest-cov>=5.0", "jsonschema>=4.0", "pillow>=10.0", "pymodbus>=3.9"]
 
 [project.scripts]
 agent-lab = "agent_lab.cli:main"
 devassist = "devassist.cli:main"
+plcsim = "plcsim.cli:main"
 
 [tool.setuptools.package-data]
 devassist = ["instructions/*.md", "eval_cases.yaml", "app_package/*.png"]

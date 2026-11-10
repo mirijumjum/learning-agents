@@ -31,6 +31,10 @@ and run them**, looping back with feedback until the tests pass.
 > Microsoft Teams. It runs free on Ollama and is ready to move to Azure OpenAI (GPT-5), Teams and Microsoft 365 Copilot.
 > See [docs/DEVASSIST.md](docs/DEVASSIST.md).
 
+> **New: plcsim.** A PLC simulator for learning how PLCs work (scan cycle, IEC 61131-3 blocks, ladder rungs,
+> interlocks, alarms), with simulated field signals, event publishing, a Modbus TCP server and agents that work
+> next to the PLC on Ollama. See [docs/PLC-SIMULADOR.md](docs/PLC-SIMULADOR.md) (in Spanish).
+
 ## Table of contents
 
 - [Quick start](#quick-start)
