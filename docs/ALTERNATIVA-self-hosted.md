@@ -38,7 +38,7 @@ Qué se ha añadido en esta rama:
 | --- | --- |
 | Perfil genérico `openai-compatible`: URL base, modelo fuerte y rápido, API key opcional, URL aparte para el modelo rápido y cómo se envía el nivel de razonamiento | `src/devassist/config.py`, `src/devassist/llm.py` |
 | `devassist doctor` comprueba que el servidor responde y sirve los dos modelos | `src/devassist/cli.py` |
-| 14 tests contra un servidor de modelos simulado (forma de la petición, clave, razonamiento, llamadas a herramientas, dos servidores, doctor) | `tests/test_devassist_self_hosted.py` |
+| 15 tests contra un servidor de modelos simulado (forma de la petición, clave, razonamiento, llamadas a herramientas, dos servidores, doctor, igualdad con el perfil `ollama`) | `tests/test_devassist_self_hosted.py` |
 | `docker-compose.yml` con Caddy (TLS), DevAssist, Ollama en CPU por defecto y vLLM en GPU con `--profile gpu` | `deploy/self-hosted/` |
 | Ejemplos de configuración | `deploy/self-hosted/.env.example`, `.env.devassist.example` |
 
@@ -191,6 +191,11 @@ el coste es fijo y no sube con cada token.
     por llamada.
   - Los modelos pequeños **inventan enlaces**: se eliminan en código todas las URLs que no vienen de GitLab.
   - Esa decisión test/código es la parte menos fiable con modelos de 4–8B.
+  - Con la GPU de 12 GB compartida, la batería bajó de 7/7 a **5/7** y tardó 816 s en vez de ~2 min:
+    el enrutador y el agente de trazas superaron el límite de 180 s. El perfil `ollama` original falla
+    igual en esas condiciones. Hay que dimensionar la GPU para la concurrencia, no solo para el modelo.
+  - Ollama carga los modelos con 4096 tokens de contexto por defecto y la API de OpenAI no permite
+    pedir más: hay que subirlo en el servidor (`OLLAMA_CONTEXT_LENGTH`).
   - Las muestras son pequeñas (7 casos): indican que funciona, no una tasa de acierto.
 - **Cada familia de modelos pide su ajuste**: Qwen3 en vLLM ignora `reasoning_effort` (hay que usar
   `thinking-flag`), gpt-oss rechaza `none`, y cada uno necesita su `--tool-call-parser`. Un error aquí
@@ -312,7 +317,37 @@ duplica el servicio `vllm` y usa `OPENAI_COMPATIBLE_BASE_URL_FAST`.
 
 Verificado en esta máquina (Windows, RTX 3060 de 12 GB compartida):
 
-EVAL_RESULTS_PLACEHOLDER
+- `python -m pytest`: 112 tests en verde, 15 de ellos nuevos para este perfil. Comprueban, contra un
+  servidor de modelos simulado, la URL `/v1/chat/completions`, la cabecera `Authorization: Bearer`,
+  el modelo de cada agente, `max_completion_tokens`, las tres formas de enviar el razonamiento, una
+  llamada a herramienta de ida y vuelta, el modelo rápido en otro servidor, `devassist doctor` y el
+  coste (0 $ reales, más lo que habría costado en Azure).
+- Un test comprueba que, apuntado a Ollama, el perfil genérico envía **exactamente las mismas
+  peticiones** que el perfil `ollama`, que pasó 7/7 en la rama principal.
+- `devassist eval --profile openai-compatible` contra el endpoint `/v1` de Ollama
+  (qwen3:8b + qwen3:4b), con la GPU compartida al 92–99 % por otras sesiones:
+
+  | Caso | Resultado |
+  | --- | --- |
+  | Generar tests de la MR !231 (rama, CI real, MR) | Pasa |
+  | Detectar el bug real de la MR !232 | Pasa |
+  | Referencia de API (docs) | Falla: el enrutador superó los 180 s |
+  | Rama y lista de MRs (llamadas a herramientas) | Pasa |
+  | Incidente de ayer 17:00–18:00 (trazas) | Falla: el modelo superó los 180 s |
+  | Pipeline rojo | Pasa |
+  | Ayuda | Pasa |
+  | **Total** | **5/7 en 816 s** (en la rama principal, sin carga: 7/7 en ~2 min) |
+
+  Los dos fallos se repitieron al volver a pasarlos. El caso de docs falla igual con el perfil
+  `ollama` original en las mismas condiciones (186 s, enrutador cortado a los 180 s), así que la causa
+  es la GPU compartida (varios procesos alternan modelos en 12 GB de VRAM) y no el perfil. Es, eso sí,
+  un aviso real: **una sola GPU pequeña compartida no aguanta varios usuarios a la vez**, y el límite
+  de tiempo convierte la espera en un error. En producción, vLLM agrupa peticiones concurrentes en la
+  misma GPU, que es lo que falta aquí.
+- Al consultar Ollama se vio que cargaba los modelos con **4096 tokens de contexto**. Por la API de
+  OpenAI no se puede pedir más por petición, y los prompts de DevAssist (hasta 48 000 caracteres)
+  pueden superarlo. Por eso el `docker-compose.yml` fija `OLLAMA_CONTEXT_LENGTH=16384`. En vLLM se
+  controla con `--max-model-len`.
 
 No verificado:
 

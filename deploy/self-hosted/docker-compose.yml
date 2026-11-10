@@ -56,6 +56,10 @@ services:
     restart: unless-stopped
     expose:
       - "11434"
+    environment:
+      # The OpenAI-compatible API can't raise the context per request, and Ollama's default (4096
+      # tokens) silently truncates DevAssist's longer prompts.
+      OLLAMA_CONTEXT_LENGTH: "16384"
     volumes:
       - ollama-models:/root/.ollama
     # gpus: all
