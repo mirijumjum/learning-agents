@@ -1,7 +1,7 @@
 """All configuration comes from environment variables.
 
 Moving from the free local setup to the paid one means changing these values,
-never the code: DEVASSIST_PROFILE=ollama becomes DEVASSIST_PROFILE=azure.
+never the code: DEVASSIST_PROFILE=ollama becomes DEVASSIST_PROFILE=azure, openai or anthropic.
 """
 
 from __future__ import annotations
@@ -12,7 +12,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
-PROFILES = ("mock", "ollama", "azure")
+PROFILES = ("mock", "ollama", "azure", "openai", "anthropic")
+PAID_PROFILES = ("azure", "openai", "anthropic")
 
 
 class ConfigError(RuntimeError):
@@ -50,6 +51,19 @@ class Settings:
     azure_deployment_fast: str = "gpt-5-mini"
     azure_api_version: str = ""
 
+    # OpenAI API, called directly. Empty base URL means https://api.openai.com/v1;
+    # https://eu.api.openai.com/v1 for a Europe data-residency project.
+    openai_api_key: str = ""
+    openai_base_url: str = ""
+    openai_model_strong: str = "gpt-6.1-sol"
+    openai_model_fast: str = "gpt-6-luna"
+
+    # Anthropic API, called directly. Empty base URL means https://api.anthropic.com.
+    anthropic_api_key: str = ""
+    anthropic_base_url: str = ""
+    anthropic_model_strong: str = "claude-opus-5-5"
+    anthropic_model_fast: str = "claude-haiku-5-5"
+
     # GitLab
     gitlab_url: str = "http://127.0.0.1:8929"
     gitlab_token: str = "local-dev-token"
@@ -71,7 +85,7 @@ class Settings:
     max_diff_chars: int = 60_000
     max_input_chars: int = 48_000
     max_output_tokens: int = 4_000
-    reasoning_effort: str = ""  # empty: "none" on Ollama, "low" on Azure
+    reasoning_effort: str = ""  # empty: "none" on Ollama, "low" on the paid profiles
     llm_timeout_seconds: float = 180.0
     max_test_attempts: int = 3
     pipeline_timeout_seconds: float = 900.0
@@ -123,6 +137,14 @@ class Settings:
             azure_deployment_strong=text("AZURE_OPENAI_DEPLOYMENT_STRONG", defaults.azure_deployment_strong),
             azure_deployment_fast=text("AZURE_OPENAI_DEPLOYMENT_FAST", defaults.azure_deployment_fast),
             azure_api_version=text("AZURE_OPENAI_API_VERSION", ""),
+            openai_api_key=text("OPENAI_API_KEY", ""),
+            openai_base_url=text("OPENAI_BASE_URL", "").rstrip("/"),
+            openai_model_strong=text("OPENAI_MODEL_STRONG", defaults.openai_model_strong),
+            openai_model_fast=text("OPENAI_MODEL_FAST", defaults.openai_model_fast),
+            anthropic_api_key=text("ANTHROPIC_API_KEY", ""),
+            anthropic_base_url=text("ANTHROPIC_BASE_URL", "").rstrip("/"),
+            anthropic_model_strong=text("ANTHROPIC_MODEL_STRONG", defaults.anthropic_model_strong),
+            anthropic_model_fast=text("ANTHROPIC_MODEL_FAST", defaults.anthropic_model_fast),
             gitlab_url=text("GITLAB_URL", defaults.gitlab_url).rstrip("/"),
             gitlab_token=text("GITLAB_TOKEN", defaults.gitlab_token),
             gitlab_projects=_csv(e.get("GITLAB_PROJECTS")),
@@ -159,6 +181,10 @@ class Settings:
             raise ConfigError(f"DEVASSIST_PROFILE must be one of {', '.join(PROFILES)}, got {self.profile!r}")
         if self.profile == "azure" and not self.azure_endpoint:
             raise ConfigError("DEVASSIST_PROFILE=azure needs AZURE_OPENAI_ENDPOINT.")
+        if self.profile == "openai" and not self.openai_api_key:
+            raise ConfigError("DEVASSIST_PROFILE=openai needs OPENAI_API_KEY.")
+        if self.profile == "anthropic" and not self.anthropic_api_key:
+            raise ConfigError("DEVASSIST_PROFILE=anthropic needs ANTHROPIC_API_KEY.")
         if self.log_store not in ("jsonl", "azure", "elasticsearch"):
             raise ConfigError(f"DEVASSIST_LOG_STORE must be jsonl, azure or elasticsearch, got {self.log_store!r}")
         if self.max_test_attempts < 1:

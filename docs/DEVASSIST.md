@@ -262,7 +262,7 @@ Con `TEAMS_NOTIFY_WEBHOOK_URL` (un flujo de Workflows de Teams), los resultados 
 | `devassist usage` | Tokens, coste y feedback acumulados |
 | `devassist package --bot-id … --developer … --website … --privacy-url … --terms-url …` | Genera el zip para Teams y Copilot |
 
-Todos aceptan `--profile mock|ollama|azure` para cambiar de modelos sin tocar el `.env`.
+Todos aceptan `--profile mock|ollama|azure|openai|anthropic` para cambiar de modelos sin tocar el `.env`. Los perfiles `openai` y `anthropic` llaman directamente a esas APIs, sin Azure: ver [ALTERNATIVA-api-directa.md](ALTERNATIVA-api-directa.md).
 
 ## Pruebas y resultados
 

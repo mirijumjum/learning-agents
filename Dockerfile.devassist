@@ -4,7 +4,9 @@ FROM python:3.11-slim
 WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY src ./src
-RUN pip install --no-cache-dir ".[azure]"
+# azure for the Foundry setup; anthropic for the direct Anthropic API (the OpenAI connector is always installed).
+ARG EXTRAS=azure
+RUN pip install --no-cache-dir ".[${EXTRAS}]"
 
 RUN useradd --create-home devassist
 USER devassist
