@@ -1,0 +1,82 @@
+# Trace agent, automatic: when CI fails, Copilot CLI explains the failure in the run summary and,
+# for a pull request, as a comment. Equivalent of DevAssist's "pipeline failed" webhook automation.
+#
+# OFF BY DEFAULT. It only runs when the repository variable COPILOT_TRACE_ENABLED is "true"
+# (Settings → Secrets and variables → Actions → Variables). Turn it on only when the repository
+# owner has a Copilot plan with the "Allow use of Copilot CLI billed to the organization" policy:
+# every run consumes AI credits. It needs no secrets: it authenticates with GITHUB_TOKEN
+# (https://docs.github.com/en/copilot/how-tos/copilot-cli/use-copilot-cli-in-actions).
+#
+# Safety: the model never sees raw logs. The failed log is cut to 60,000 characters and masked
+# with devassist.masking (emails, IPs, phones, IDs, cards, tokens) before it is put in the prompt,
+# and Copilot CLI gets no tools at all. Runs from forks are ignored.
+name: Copilot trace on CI failure
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+  copilot-requests: write
+
+jobs:
+  diagnose:
+    if: >-
+      vars.COPILOT_TRACE_ENABLED == 'true' &&
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RUN_ID: ${{ github.event.workflow_run.id }}
+      COPILOT_AUTO_UPDATE: "false"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Install the masker
+        run: pip install -e .
+      - name: Fetch and mask the failed log
+        run: |
+          gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --log-failed | tail -c 60000 > raw.log
+          python -c "import sys; from devassist.masking import mask; sys.stdout.write(mask(sys.stdin.buffer.read().decode('utf-8', 'replace')))" < raw.log > failed.log
+          rm raw.log
+          echo "errors=$(grep -ciE 'error|failed|exception' failed.log || true)" >> "$GITHUB_OUTPUT"
+        id: log
+      - name: Install Copilot CLI
+        run: npm install -g @github/copilot
+      - name: Diagnose
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "You are the trace agent. A CI run failed. Explain why using only the log below."
+            echo "Rules: separate what the log shows from what you infer; say how sure you are;"
+            echo "never guess masked values such as <email> or <ip>; at most 8 lines; then one line"
+            echo "starting 'Suggested fix:'; then a ready-to-paste issue title. No URLs."
+            echo "Lines matching error|failed|exception (counted by code): ${{ steps.log.outputs.errors }}"
+            echo "----- masked failed-job log -----"
+            cat failed.log
+          } > prompt.txt
+          copilot -p "$(cat prompt.txt)" -s > diagnosis.md
+      - name: Publish
+        env:
+          PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+        run: |
+          {
+            echo "### Copilot trace: CI run $RUN_ID failed"
+            echo
+            cat diagnosis.md
+            echo
+            echo "_Generated from the masked log. Verify before acting._"
+          } > comment.md
+          cat comment.md >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$PR_NUMBER" ]; then
+            gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file comment.md
+          fi
