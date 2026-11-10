@@ -1,0 +1,22 @@
+# Agent settings to apply in Copilot Studio (Settings > Generative AI). Written by hand in the
+# extension's file layout; compare with your own clone before syncing, because the extension
+# owns this file's exact schema.
+mcs.metadata:
+  componentName: DevAssist settings
+settings:
+  # Generative orchestration: the model picks tools and topics. Required for MCP tools.
+  GenerativeActionsEnabled: true
+aISettings:
+  # GPT Chat Latest: the default model, generally available and processed in-region for
+  # Europe. "Deep" models (GPT-5 Reasoning, Claude Opus) are preview or cross-geo in Europe
+  # and add 10 credits per 1,000 tokens, so they are not used.
+  model: GPTChatLatest
+  # Answer only from tools and instructions, not from general web or model knowledge.
+  useModelKnowledge: false
+  webBrowsing: false
+  isSemanticSearchEnabled: false
+  contentModeration: High
+security:
+  # Only signed-in members of the tenant ("Authenticate with Microsoft").
+  authenticationMode: Integrated
+  # Ask the user before any tool that writes (CreateBranch, CommentOnMergeRequest, CreateIssue).

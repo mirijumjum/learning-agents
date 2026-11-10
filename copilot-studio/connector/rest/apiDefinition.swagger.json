@@ -1,0 +1,1803 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "DevAssist",
+    "description": "DevAssist backend for the Copilot Studio agent: GitLab (never merges, deploys or deletes; commits only to ai/* branches), unit tests run in GitLab CI, documentation merge requests and read-only, masked log analysis.",
+    "version": "0.1.0",
+    "contact": {
+      "name": "DevAssist owners"
+    }
+  },
+  "host": "devassist.example.com",
+  "basePath": "/",
+  "schemes": [
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "securityDefinitions": {
+    "api_key": {
+      "type": "apiKey",
+      "in": "header",
+      "name": "X-API-Key"
+    }
+  },
+  "security": [
+    {
+      "api_key": []
+    }
+  ],
+  "paths": {
+    "/api/tools/ListProjects": {
+      "post": {
+        "operationId": "ListProjects",
+        "summary": "List enabled GitLab projects",
+        "description": "List the GitLab projects DevAssist may work on.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          {
+            "name": "X-DevAssist-Requester",
+            "in": "header",
+            "required": false,
+            "type": "string",
+            "x-ms-summary": "Requester e-mail",
+            "x-ms-visibility": "advanced",
+            "description": "E-mail of the person using the agent. In Copilot Studio set it to System.User.Email, never let the model fill it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "projects": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "x-ms-summary": "Projects"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refused or failed; the reason is in error",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "description": "Why the call was refused",
+                  "x-ms-summary": "Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          }
+        }
+      }
+    },
+    "/api/tools/ListMergeRequests": {
+      "post": {
+        "operationId": "ListMergeRequests",
+        "summary": "List merge requests",
+        "description": "List merge requests of a project, optionally only those assigned to the person asking.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "GitLab project, e.g. payments-api or acme/payments-api. Only enabled projects work.",
+                  "x-ms-summary": "Project"
+                },
+                "state": {
+                  "type": "string",
+                  "description": "opened, merged, closed or all",
+                  "enum": [
+                    "opened",
+                    "merged",
+                    "closed",
+                    "all"
+                  ],
+                  "x-ms-summary": "State"
+                },
+                "assignedToMe": {
+                  "type": "boolean",
+                  "description": "Only merge requests assigned to the person asking",
+                  "x-ms-summary": "AssignedToMe"
+                },
+                "assignee": {
+                  "type": "string",
+                  "description": "GitLab username or e-mail of the assignee",
+                  "x-ms-summary": "Assignee"
+                }
+              },
+              "required": [
+                "project"
+              ]
+            }
+          },
+          {
+            "name": "X-DevAssist-Requester",
+            "in": "header",
+            "required": false,
+            "type": "string",
+            "x-ms-summary": "Requester e-mail",
+            "x-ms-visibility": "advanced",
+            "description": "E-mail of the person using the agent. In Copilot Studio set it to System.User.Email, never let the model fill it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "Project path",
+                  "x-ms-summary": "Project"
+                },
+                "mergeRequests": {
+                  "type": "array",
+                  "description": "Merge requests",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "iid": {
+                        "type": "integer",
+                        "description": "Number",
+                        "x-ms-summary": "Iid"
+                      },
+                      "title": {
+                        "type": "string",
+                        "description": "Title",
+                        "x-ms-summary": "Title"
+                      },
+                      "state": {
+                        "type": "string",
+                        "description": "State",
+                        "x-ms-summary": "State"
+                      },
+                      "sourceBranch": {
+                        "type": "string",
+                        "description": "Source branch",
+                        "x-ms-summary": "SourceBranch"
+                      },
+                      "targetBranch": {
+                        "type": "string",
+                        "description": "Target branch",
+                        "x-ms-summary": "TargetBranch"
+                      },
+                      "url": {
+                        "type": "string",
+                        "description": "Link that came from GitLab",
+                        "x-ms-summary": "Url"
+                      }
+                    }
+                  },
+                  "x-ms-summary": "MergeRequests"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refused or failed; the reason is in error",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "description": "Why the call was refused",
+                  "x-ms-summary": "Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          }
+        }
+      }
+    },
+    "/api/tools/CreateBranch": {
+      "post": {
+        "operationId": "CreateBranch",
+        "summary": "Create a branch",
+        "description": "Create a branch from an existing branch. Confirm the name with the user first.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "GitLab project, e.g. payments-api or acme/payments-api. Only enabled projects work.",
+                  "x-ms-summary": "Project"
+                },
+                "branch": {
+                  "type": "string",
+                  "description": "Name of the new branch",
+                  "x-ms-summary": "Branch"
+                },
+                "ref": {
+                  "type": "string",
+                  "description": "Existing branch to create it from",
+                  "x-ms-summary": "Ref"
+                }
+              },
+              "required": [
+                "project",
+                "branch",
+                "ref"
+              ]
+            }
+          },
+          {
+            "name": "X-DevAssist-Requester",
+            "in": "header",
+            "required": false,
+            "type": "string",
+            "x-ms-summary": "Requester e-mail",
+            "x-ms-visibility": "advanced",
+            "description": "E-mail of the person using the agent. In Copilot Studio set it to System.User.Email, never let the model fill it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "Project path",
+                  "x-ms-summary": "Project"
+                },
+                "branch": {
+                  "type": "string",
+                  "description": "Branch",
+                  "x-ms-summary": "Branch"
+                },
+                "ref": {
+                  "type": "string",
+                  "description": "From",
+                  "x-ms-summary": "Ref"
+                },
+                "url": {
+                  "type": "string",
+                  "description": "Link that came from GitLab",
+                  "x-ms-summary": "Url"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refused or failed; the reason is in error",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "description": "Why the call was refused",
+                  "x-ms-summary": "Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          }
+        }
+      }
+    },
+    "/api/tools/GetPipelineStatus": {
+      "post": {
+        "operationId": "GetPipelineStatus",
+        "summary": "Get pipeline status",
+        "description": "Get the status, branch and coverage of one pipeline.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "GitLab project, e.g. payments-api or acme/payments-api. Only enabled projects work.",
+                  "x-ms-summary": "Project"
+                },
+                "pipelineId": {
+                  "type": "integer",
+                  "description": "Pipeline number",
+                  "minimum": 1,
+                  "x-ms-summary": "PipelineId"
+                }
+              },
+              "required": [
+                "project",
+                "pipelineId"
+              ]
+            }
+          },
+          {
+            "name": "X-DevAssist-Requester",
+            "in": "header",
+            "required": false,
+            "type": "string",
+            "x-ms-summary": "Requester e-mail",
+            "x-ms-visibility": "advanced",
+            "description": "E-mail of the person using the agent. In Copilot Studio set it to System.User.Email, never let the model fill it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "Project path",
+                  "x-ms-summary": "Project"
+                },
+                "pipelineId": {
+                  "type": "integer",
+                  "description": "Pipeline",
+                  "x-ms-summary": "PipelineId"
+                },
+                "status": {
+                  "type": "string",
+                  "description": "Status",
+                  "x-ms-summary": "Status"
+                },
+                "ref": {
+                  "type": "string",
+                  "description": "Branch",
+                  "x-ms-summary": "Ref"
+                },
+                "coverage": {
+                  "type": "string",
+                  "description": "Coverage percent reported by CI",
+                  "x-ms-summary": "Coverage"
+                },
+                "url": {
+                  "type": "string",
+                  "description": "Link that came from GitLab",
+                  "x-ms-summary": "Url"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refused or failed; the reason is in error",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "description": "Why the call was refused",
+                  "x-ms-summary": "Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          }
+        }
+      }
+    },
+    "/api/tools/CommentOnMergeRequest": {
+      "post": {
+        "operationId": "CommentOnMergeRequest",
+        "summary": "Comment on a merge request",
+        "description": "Add a comment to a merge request. Personal data is masked. Confirm the text with the user first.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "GitLab project, e.g. payments-api or acme/payments-api. Only enabled projects work.",
+                  "x-ms-summary": "Project"
+                },
+                "mergeRequestIid": {
+                  "type": "integer",
+                  "description": "Merge request number",
+                  "minimum": 1,
+                  "x-ms-summary": "MergeRequestIid"
+                },
+                "body": {
+                  "type": "string",
+                  "description": "Comment in Markdown",
+                  "x-ms-summary": "Body"
+                }
+              },
+              "required": [
+                "project",
+                "mergeRequestIid",
+                "body"
+              ]
+            }
+          },
+          {
+            "name": "X-DevAssist-Requester",
+            "in": "header",
+            "required": false,
+            "type": "string",
+            "x-ms-summary": "Requester e-mail",
+            "x-ms-visibility": "advanced",
+            "description": "E-mail of the person using the agent. In Copilot Studio set it to System.User.Email, never let the model fill it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "Project path",
+                  "x-ms-summary": "Project"
+                },
+                "mergeRequestIid": {
+                  "type": "integer",
+                  "description": "Merge request",
+                  "x-ms-summary": "MergeRequestIid"
+                },
+                "url": {
+                  "type": "string",
+                  "description": "Link that came from GitLab",
+                  "x-ms-summary": "Url"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refused or failed; the reason is in error",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "description": "Why the call was refused",
+                  "x-ms-summary": "Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          }
+        }
+      }
+    },
+    "/api/tools/CreateIssue": {
+      "post": {
+        "operationId": "CreateIssue",
+        "summary": "Create an issue",
+        "description": "Create a GitLab issue, for example from a diagnosis. Personal data is masked. Confirm with the user first.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "GitLab project, e.g. payments-api or acme/payments-api. Only enabled projects work.",
+                  "x-ms-summary": "Project"
+                },
+                "title": {
+                  "type": "string",
+                  "description": "Issue title",
+                  "x-ms-summary": "Title"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Issue description in Markdown",
+                  "x-ms-summary": "Description"
+                }
+              },
+              "required": [
+                "project",
+                "title"
+              ]
+            }
+          },
+          {
+            "name": "X-DevAssist-Requester",
+            "in": "header",
+            "required": false,
+            "type": "string",
+            "x-ms-summary": "Requester e-mail",
+            "x-ms-visibility": "advanced",
+            "description": "E-mail of the person using the agent. In Copilot Studio set it to System.User.Email, never let the model fill it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "Project path",
+                  "x-ms-summary": "Project"
+                },
+                "issueIid": {
+                  "type": "integer",
+                  "description": "Issue number",
+                  "x-ms-summary": "IssueIid"
+                },
+                "url": {
+                  "type": "string",
+                  "description": "Link that came from GitLab",
+                  "x-ms-summary": "Url"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refused or failed; the reason is in error",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "description": "Why the call was refused",
+                  "x-ms-summary": "Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          }
+        }
+      }
+    },
+    "/api/tools/StartTestSession": {
+      "post": {
+        "operationId": "StartTestSession",
+        "summary": "Start writing tests",
+        "description": "Step 1 of writing unit tests. Reads a merge request (or a class on a branch), creates an ai/tests-* branch and returns the diff, source files, a style example and the team's testing rules. Then write the tests and call SubmitTestFile.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "GitLab project, e.g. payments-api or acme/payments-api. Only enabled projects work.",
+                  "x-ms-summary": "Project"
+                },
+                "mergeRequestIid": {
+                  "type": "integer",
+                  "description": "Merge request number, if the tests are for an MR",
+                  "minimum": 1,
+                  "x-ms-summary": "MergeRequestIid"
+                },
+                "ref": {
+                  "type": "string",
+                  "description": "Branch, when there is no merge request",
+                  "x-ms-summary": "Ref"
+                },
+                "symbol": {
+                  "type": "string",
+                  "description": "Class or function to focus on, e.g. OrderService",
+                  "x-ms-summary": "Symbol"
+                }
+              },
+              "required": [
+                "project"
+              ]
+            }
+          },
+          {
+            "name": "X-DevAssist-Requester",
+            "in": "header",
+            "required": false,
+            "type": "string",
+            "x-ms-summary": "Requester e-mail",
+            "x-ms-visibility": "advanced",
+            "description": "E-mail of the person using the agent. In Copilot Studio set it to System.User.Email, never let the model fill it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "sessionId": {
+                  "type": "string",
+                  "description": "Session id for the next calls",
+                  "x-ms-summary": "SessionId"
+                },
+                "status": {
+                  "type": "string",
+                  "description": "Session status",
+                  "x-ms-summary": "Status"
+                },
+                "branch": {
+                  "type": "string",
+                  "description": "ai/tests-* branch",
+                  "x-ms-summary": "Branch"
+                },
+                "diff": {
+                  "type": "string",
+                  "description": "Merge request diff",
+                  "x-ms-summary": "Diff"
+                },
+                "sourceFiles": {
+                  "type": "array",
+                  "description": "Source files",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "description": "File path",
+                        "x-ms-summary": "Path"
+                      },
+                      "content": {
+                        "type": "string",
+                        "description": "File content",
+                        "x-ms-summary": "Content"
+                      }
+                    }
+                  },
+                  "x-ms-summary": "SourceFiles"
+                },
+                "fileFormat": {
+                  "type": "string",
+                  "description": "How to submit",
+                  "x-ms-summary": "FileFormat"
+                },
+                "testingRules": {
+                  "type": "string",
+                  "description": "Team testing rules",
+                  "x-ms-summary": "TestingRules"
+                },
+                "nextStep": {
+                  "type": "string",
+                  "description": "What to do next",
+                  "x-ms-summary": "NextStep"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refused or failed; the reason is in error",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "description": "Why the call was refused",
+                  "x-ms-summary": "Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          }
+        }
+      }
+    },
+    "/api/tools/SubmitTestFile": {
+      "post": {
+        "operationId": "SubmitTestFile",
+        "summary": "Commit tests and run CI",
+        "description": "Step 2. Commits the complete test file to the session's ai/tests-* branch and starts the GitLab pipeline. Only files inside a tests folder are accepted. Limited attempts per session.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "sessionId": {
+                  "type": "string",
+                  "description": "Session id from StartTestSession",
+                  "x-ms-summary": "SessionId"
+                },
+                "path": {
+                  "type": "string",
+                  "description": "Test file path, inside the tests folder",
+                  "x-ms-summary": "Path"
+                },
+                "content": {
+                  "type": "string",
+                  "description": "Complete content of the test file",
+                  "x-ms-summary": "Content"
+                }
+              },
+              "required": [
+                "sessionId",
+                "path",
+                "content"
+              ]
+            }
+          },
+          {
+            "name": "X-DevAssist-Requester",
+            "in": "header",
+            "required": false,
+            "type": "string",
+            "x-ms-summary": "Requester e-mail",
+            "x-ms-visibility": "advanced",
+            "description": "E-mail of the person using the agent. In Copilot Studio set it to System.User.Email, never let the model fill it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "sessionId": {
+                  "type": "string",
+                  "description": "Session id",
+                  "x-ms-summary": "SessionId"
+                },
+                "status": {
+                  "type": "string",
+                  "description": "running",
+                  "x-ms-summary": "Status"
+                },
+                "attempt": {
+                  "type": "integer",
+                  "description": "Attempt number",
+                  "x-ms-summary": "Attempt"
+                },
+                "attemptsLeft": {
+                  "type": "integer",
+                  "description": "Attempts left",
+                  "x-ms-summary": "AttemptsLeft"
+                },
+                "pipelineId": {
+                  "type": "integer",
+                  "description": "Pipeline",
+                  "x-ms-summary": "PipelineId"
+                },
+                "pipelineUrl": {
+                  "type": "string",
+                  "description": "Link that came from GitLab",
+                  "x-ms-summary": "PipelineUrl"
+                },
+                "nextStep": {
+                  "type": "string",
+                  "description": "What to do next",
+                  "x-ms-summary": "NextStep"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refused or failed; the reason is in error",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "description": "Why the call was refused",
+                  "x-ms-summary": "Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          }
+        }
+      }
+    },
+    "/api/tools/GetTestRun": {
+      "post": {
+        "operationId": "GetTestRun",
+        "summary": "Get the test run result",
+        "description": "Step 3. Reads the result of the session's pipeline from GitLab: running, passed, failed (with the masked job log) or exhausted. Can wait up to 25 seconds. The pass/fail result and counts come from CI, never from you.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "sessionId": {
+                  "type": "string",
+                  "description": "Session id",
+                  "x-ms-summary": "SessionId"
+                },
+                "waitSeconds": {
+                  "type": "integer",
+                  "description": "Seconds to wait for CI to finish, 0 to 25",
+                  "minimum": 0,
+                  "maximum": 25,
+                  "x-ms-summary": "WaitSeconds"
+                }
+              },
+              "required": [
+                "sessionId"
+              ]
+            }
+          },
+          {
+            "name": "X-DevAssist-Requester",
+            "in": "header",
+            "required": false,
+            "type": "string",
+            "x-ms-summary": "Requester e-mail",
+            "x-ms-visibility": "advanced",
+            "description": "E-mail of the person using the agent. In Copilot Studio set it to System.User.Email, never let the model fill it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "sessionId": {
+                  "type": "string",
+                  "description": "Session id",
+                  "x-ms-summary": "SessionId"
+                },
+                "status": {
+                  "type": "string",
+                  "description": "ready, running, failed, exhausted, passed, mr_opened or bug_reported",
+                  "x-ms-summary": "Status"
+                },
+                "attempt": {
+                  "type": "integer",
+                  "description": "Attempt",
+                  "x-ms-summary": "Attempt"
+                },
+                "attemptsLeft": {
+                  "type": "integer",
+                  "description": "Attempts left",
+                  "x-ms-summary": "AttemptsLeft"
+                },
+                "failedLog": {
+                  "type": "string",
+                  "description": "Masked log of the failed job",
+                  "x-ms-summary": "FailedLog"
+                },
+                "passing": {
+                  "type": "integer",
+                  "description": "Tests passing",
+                  "x-ms-summary": "Passing"
+                },
+                "failing": {
+                  "type": "integer",
+                  "description": "Tests failing",
+                  "x-ms-summary": "Failing"
+                },
+                "pipelineUrl": {
+                  "type": "string",
+                  "description": "Link that came from GitLab",
+                  "x-ms-summary": "PipelineUrl"
+                },
+                "summary": {
+                  "type": "string",
+                  "description": "Final result, when finished",
+                  "x-ms-summary": "Summary"
+                },
+                "nextStep": {
+                  "type": "string",
+                  "description": "What to do next",
+                  "x-ms-summary": "NextStep"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refused or failed; the reason is in error",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "description": "Why the call was refused",
+                  "x-ms-summary": "Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          }
+        }
+      }
+    },
+    "/api/tools/OpenTestMergeRequest": {
+      "post": {
+        "operationId": "OpenTestMergeRequest",
+        "summary": "Open the tests merge request",
+        "description": "Step 4. Opens a merge request with the tests, only if the last pipeline passed. Returns the summary to show.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "sessionId": {
+                  "type": "string",
+                  "description": "Session id",
+                  "x-ms-summary": "SessionId"
+                }
+              },
+              "required": [
+                "sessionId"
+              ]
+            }
+          },
+          {
+            "name": "X-DevAssist-Requester",
+            "in": "header",
+            "required": false,
+            "type": "string",
+            "x-ms-summary": "Requester e-mail",
+            "x-ms-visibility": "advanced",
+            "description": "E-mail of the person using the agent. In Copilot Studio set it to System.User.Email, never let the model fill it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "description": "mr_opened",
+                  "x-ms-summary": "Status"
+                },
+                "summary": {
+                  "type": "string",
+                  "description": "Result written by the backend from measured facts. Show it to the user as is.",
+                  "x-ms-summary": "Summary"
+                },
+                "mergeRequestUrl": {
+                  "type": "string",
+                  "description": "Link that came from GitLab",
+                  "x-ms-summary": "MergeRequestUrl"
+                },
+                "pipelineUrl": {
+                  "type": "string",
+                  "description": "Link that came from GitLab",
+                  "x-ms-summary": "MergeRequestUrl"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refused or failed; the reason is in error",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "description": "Why the call was refused",
+                  "x-ms-summary": "Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          }
+        }
+      }
+    },
+    "/api/tools/ReportCodeBug": {
+      "post": {
+        "operationId": "ReportCodeBug",
+        "summary": "Stop: the code has a bug",
+        "description": "Use instead of another attempt when the failing test is right and the code clearly contradicts its purpose. Closes the session without a merge request.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "sessionId": {
+                  "type": "string",
+                  "description": "Session id",
+                  "x-ms-summary": "SessionId"
+                },
+                "explanation": {
+                  "type": "string",
+                  "description": "The bug and where it is, in one or two sentences",
+                  "x-ms-summary": "Explanation"
+                }
+              },
+              "required": [
+                "sessionId",
+                "explanation"
+              ]
+            }
+          },
+          {
+            "name": "X-DevAssist-Requester",
+            "in": "header",
+            "required": false,
+            "type": "string",
+            "x-ms-summary": "Requester e-mail",
+            "x-ms-visibility": "advanced",
+            "description": "E-mail of the person using the agent. In Copilot Studio set it to System.User.Email, never let the model fill it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "description": "bug_reported",
+                  "x-ms-summary": "Status"
+                },
+                "summary": {
+                  "type": "string",
+                  "description": "Result written by the backend from measured facts. Show it to the user as is.",
+                  "x-ms-summary": "Summary"
+                },
+                "pipelineUrl": {
+                  "type": "string",
+                  "description": "Link that came from GitLab",
+                  "x-ms-summary": "PipelineUrl"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refused or failed; the reason is in error",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "description": "Why the call was refused",
+                  "x-ms-summary": "Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          }
+        }
+      }
+    },
+    "/api/tools/GetDocsSources": {
+      "post": {
+        "operationId": "GetDocsSources",
+        "summary": "Read code to document",
+        "description": "Returns the controller/route files (kind=api) or Python files (kind=comments) of a project's default branch, for writing documentation.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "GitLab project, e.g. payments-api or acme/payments-api. Only enabled projects work.",
+                  "x-ms-summary": "Project"
+                },
+                "kind": {
+                  "type": "string",
+                  "description": "api or comments",
+                  "enum": [
+                    "api",
+                    "comments"
+                  ],
+                  "x-ms-summary": "Kind"
+                },
+                "symbol": {
+                  "type": "string",
+                  "description": "Only files that mention this name",
+                  "x-ms-summary": "Symbol"
+                }
+              },
+              "required": [
+                "project"
+              ]
+            }
+          },
+          {
+            "name": "X-DevAssist-Requester",
+            "in": "header",
+            "required": false,
+            "type": "string",
+            "x-ms-summary": "Requester e-mail",
+            "x-ms-visibility": "advanced",
+            "description": "E-mail of the person using the agent. In Copilot Studio set it to System.User.Email, never let the model fill it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "Project path",
+                  "x-ms-summary": "Project"
+                },
+                "ref": {
+                  "type": "string",
+                  "description": "Branch",
+                  "x-ms-summary": "Ref"
+                },
+                "files": {
+                  "type": "array",
+                  "description": "Files",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "description": "File path",
+                        "x-ms-summary": "Path"
+                      },
+                      "content": {
+                        "type": "string",
+                        "description": "File content",
+                        "x-ms-summary": "Content"
+                      }
+                    }
+                  },
+                  "x-ms-summary": "Files"
+                },
+                "guidance": {
+                  "type": "string",
+                  "description": "What to write",
+                  "x-ms-summary": "Guidance"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refused or failed; the reason is in error",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "description": "Why the call was refused",
+                  "x-ms-summary": "Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          }
+        }
+      }
+    },
+    "/api/tools/OpenApiReferenceMergeRequest": {
+      "post": {
+        "operationId": "OpenApiReferenceMergeRequest",
+        "summary": "Open an MR with docs/api.md",
+        "description": "Writes the Markdown you wrote to docs/api.md, links it from the README and opens a merge request.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "GitLab project, e.g. payments-api or acme/payments-api. Only enabled projects work.",
+                  "x-ms-summary": "Project"
+                },
+                "markdown": {
+                  "type": "string",
+                  "description": "Complete API reference in Markdown",
+                  "x-ms-summary": "Markdown"
+                }
+              },
+              "required": [
+                "project",
+                "markdown"
+              ]
+            }
+          },
+          {
+            "name": "X-DevAssist-Requester",
+            "in": "header",
+            "required": false,
+            "type": "string",
+            "x-ms-summary": "Requester e-mail",
+            "x-ms-visibility": "advanced",
+            "description": "E-mail of the person using the agent. In Copilot Studio set it to System.User.Email, never let the model fill it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "Project path",
+                  "x-ms-summary": "Project"
+                },
+                "summary": {
+                  "type": "string",
+                  "description": "Result written by the backend from measured facts. Show it to the user as is.",
+                  "x-ms-summary": "Summary"
+                },
+                "mergeRequestUrl": {
+                  "type": "string",
+                  "description": "Link that came from GitLab",
+                  "x-ms-summary": "MergeRequestUrl"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refused or failed; the reason is in error",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "description": "Why the call was refused",
+                  "x-ms-summary": "Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          }
+        }
+      }
+    },
+    "/api/tools/OpenCodeCommentsMergeRequest": {
+      "post": {
+        "operationId": "OpenCodeCommentsMergeRequest",
+        "summary": "Open an MR with code comments",
+        "description": "Commits Python files where you only added docstrings or comments, and opens a merge request. The backend compares syntax trees and rejects any file where code changed.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "GitLab project, e.g. payments-api or acme/payments-api. Only enabled projects work.",
+                  "x-ms-summary": "Project"
+                },
+                "files": {
+                  "type": "array",
+                  "description": "Complete updated files",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "description": "File path",
+                        "x-ms-summary": "Path"
+                      },
+                      "content": {
+                        "type": "string",
+                        "description": "File content",
+                        "x-ms-summary": "Content"
+                      }
+                    }
+                  },
+                  "x-ms-summary": "Files"
+                }
+              },
+              "required": [
+                "project",
+                "files"
+              ]
+            }
+          },
+          {
+            "name": "X-DevAssist-Requester",
+            "in": "header",
+            "required": false,
+            "type": "string",
+            "x-ms-summary": "Requester e-mail",
+            "x-ms-visibility": "advanced",
+            "description": "E-mail of the person using the agent. In Copilot Studio set it to System.User.Email, never let the model fill it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "Project path",
+                  "x-ms-summary": "Project"
+                },
+                "summary": {
+                  "type": "string",
+                  "description": "Result written by the backend from measured facts. Show it to the user as is.",
+                  "x-ms-summary": "Summary"
+                },
+                "mergeRequestUrl": {
+                  "type": "string",
+                  "description": "Link that came from GitLab",
+                  "x-ms-summary": "MergeRequestUrl"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refused or failed; the reason is in error",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "description": "Why the call was refused",
+                  "x-ms-summary": "Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          }
+        }
+      }
+    },
+    "/api/tools/OpenChangelogMergeRequest": {
+      "post": {
+        "operationId": "OpenChangelogMergeRequest",
+        "summary": "Open an MR updating CHANGELOG.md",
+        "description": "Builds the changelog from merged merge requests (by code, so nothing is invented) and opens a merge request.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "GitLab project, e.g. payments-api or acme/payments-api. Only enabled projects work.",
+                  "x-ms-summary": "Project"
+                }
+              },
+              "required": [
+                "project"
+              ]
+            }
+          },
+          {
+            "name": "X-DevAssist-Requester",
+            "in": "header",
+            "required": false,
+            "type": "string",
+            "x-ms-summary": "Requester e-mail",
+            "x-ms-visibility": "advanced",
+            "description": "E-mail of the person using the agent. In Copilot Studio set it to System.User.Email, never let the model fill it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "Project path",
+                  "x-ms-summary": "Project"
+                },
+                "summary": {
+                  "type": "string",
+                  "description": "Result written by the backend from measured facts. Show it to the user as is.",
+                  "x-ms-summary": "Summary"
+                },
+                "mergeRequestUrl": {
+                  "type": "string",
+                  "description": "Link that came from GitLab",
+                  "x-ms-summary": "MergeRequestUrl"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refused or failed; the reason is in error",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "description": "Why the call was refused",
+                  "x-ms-summary": "Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          }
+        }
+      }
+    },
+    "/api/tools/InvestigateIncident": {
+      "post": {
+        "operationId": "InvestigateIncident",
+        "summary": "Look up errors in the logs",
+        "description": "For questions like 'why did checkout fail yesterday between 17:00 and 18:00'. Reads the logs for that time range (read-only, personal data masked), groups and counts the errors in code, and lists deployments near that time. Diagnose from this evidence and never change the counts.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "question": {
+                  "type": "string",
+                  "description": "The user's question, including the time range",
+                  "x-ms-summary": "Question"
+                },
+                "service": {
+                  "type": "string",
+                  "description": "Service name, if known",
+                  "x-ms-summary": "Service"
+                },
+                "project": {
+                  "type": "string",
+                  "description": "GitLab project, to check recent deployments",
+                  "x-ms-summary": "Project"
+                }
+              },
+              "required": [
+                "question"
+              ]
+            }
+          },
+          {
+            "name": "X-DevAssist-Requester",
+            "in": "header",
+            "required": false,
+            "type": "string",
+            "x-ms-summary": "Requester e-mail",
+            "x-ms-visibility": "advanced",
+            "description": "E-mail of the person using the agent. In Copilot Studio set it to System.User.Email, never let the model fill it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "service": {
+                  "type": "string",
+                  "description": "Service",
+                  "x-ms-summary": "Service"
+                },
+                "window": {
+                  "type": "string",
+                  "description": "Time window",
+                  "x-ms-summary": "Window"
+                },
+                "totalErrors": {
+                  "type": "integer",
+                  "description": "Errors",
+                  "x-ms-summary": "TotalErrors"
+                },
+                "groupCount": {
+                  "type": "integer",
+                  "description": "Groups",
+                  "x-ms-summary": "GroupCount"
+                },
+                "groups": {
+                  "type": "array",
+                  "description": "Error groups",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "count": {
+                        "type": "integer",
+                        "description": "Count",
+                        "x-ms-summary": "Count"
+                      },
+                      "firstSeen": {
+                        "type": "string",
+                        "description": "First",
+                        "x-ms-summary": "FirstSeen"
+                      },
+                      "lastSeen": {
+                        "type": "string",
+                        "description": "Last",
+                        "x-ms-summary": "LastSeen"
+                      },
+                      "sample": {
+                        "type": "string",
+                        "description": "Sample",
+                        "x-ms-summary": "Sample"
+                      }
+                    }
+                  },
+                  "x-ms-summary": "Groups"
+                },
+                "complex": {
+                  "type": "boolean",
+                  "description": "More than 3 error groups",
+                  "x-ms-summary": "Complex"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refused or failed; the reason is in error",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "description": "Why the call was refused",
+                  "x-ms-summary": "Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          }
+        }
+      }
+    },
+    "/api/tools/GetFailedPipelineLog": {
+      "post": {
+        "operationId": "GetFailedPipelineLog",
+        "summary": "Read a red pipeline's log",
+        "description": "For 'why is pipeline #N red'. Returns the failing job and the end of its log, with personal data masked.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string",
+                  "description": "GitLab project, e.g. payments-api or acme/payments-api. Only enabled projects work.",
+                  "x-ms-summary": "Project"
+                },
+                "pipelineId": {
+                  "type": "integer",
+                  "description": "Pipeline number",
+                  "minimum": 1,
+                  "x-ms-summary": "PipelineId"
+                }
+              },
+              "required": [
+                "project",
+                "pipelineId"
+              ]
+            }
+          },
+          {
+            "name": "X-DevAssist-Requester",
+            "in": "header",
+            "required": false,
+            "type": "string",
+            "x-ms-summary": "Requester e-mail",
+            "x-ms-visibility": "advanced",
+            "description": "E-mail of the person using the agent. In Copilot Studio set it to System.User.Email, never let the model fill it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "description": "Pipeline status",
+                  "x-ms-summary": "Status"
+                },
+                "url": {
+                  "type": "string",
+                  "description": "Link that came from GitLab",
+                  "x-ms-summary": "Url"
+                },
+                "job": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Job",
+                      "x-ms-summary": "Name"
+                    },
+                    "stage": {
+                      "type": "string",
+                      "description": "Stage",
+                      "x-ms-summary": "Stage"
+                    },
+                    "url": {
+                      "type": "string",
+                      "description": "Link that came from GitLab",
+                      "x-ms-summary": "Url"
+                    }
+                  },
+                  "x-ms-summary": "Job"
+                },
+                "log": {
+                  "type": "string",
+                  "description": "End of the masked job log",
+                  "x-ms-summary": "Log"
+                },
+                "note": {
+                  "type": "string",
+                  "description": "Set when the pipeline is not red",
+                  "x-ms-summary": "Note"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refused or failed; the reason is in error",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "description": "Why the call was refused",
+                  "x-ms-summary": "Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          }
+        }
+      }
+    },
+    "/api/tools/RecordFeedback": {
+      "post": {
+        "operationId": "RecordFeedback",
+        "summary": "Record feedback",
+        "description": "Record the user's feedback about DevAssist when they give it.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "rating": {
+                  "type": "string",
+                  "description": "good or bad",
+                  "enum": [
+                    "good",
+                    "bad"
+                  ],
+                  "x-ms-summary": "Rating"
+                },
+                "comment": {
+                  "type": "string",
+                  "description": "What they said",
+                  "x-ms-summary": "Comment"
+                }
+              },
+              "required": [
+                "rating"
+              ]
+            }
+          },
+          {
+            "name": "X-DevAssist-Requester",
+            "in": "header",
+            "required": false,
+            "type": "string",
+            "x-ms-summary": "Requester e-mail",
+            "x-ms-visibility": "advanced",
+            "description": "E-mail of the person using the agent. In Copilot Studio set it to System.User.Email, never let the model fill it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "recorded": {
+                  "type": "boolean",
+                  "description": "Saved",
+                  "x-ms-summary": "Recorded"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refused or failed; the reason is in error",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "description": "Why the call was refused",
+                  "x-ms-summary": "Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong API key"
+          }
+        }
+      }
+    }
+  }
+}

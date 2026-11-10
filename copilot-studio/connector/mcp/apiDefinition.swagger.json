@@ -1,0 +1,49 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "DevAssist MCP",
+    "description": "DevAssist tools as a Model Context Protocol server (Streamable HTTP). DevAssist backend for the Copilot Studio agent: GitLab (never merges, deploys or deletes; commits only to ai/* branches), unit tests run in GitLab CI, documentation merge requests and read-only, masked log analysis.",
+    "version": "0.1.0",
+    "contact": {
+      "name": "DevAssist owners"
+    }
+  },
+  "host": "devassist.example.com",
+  "basePath": "/",
+  "schemes": [
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "securityDefinitions": {
+    "api_key": {
+      "type": "apiKey",
+      "in": "header",
+      "name": "X-API-Key"
+    }
+  },
+  "security": [
+    {
+      "api_key": []
+    }
+  ],
+  "paths": {
+    "/mcp": {
+      "post": {
+        "summary": "DevAssist MCP server",
+        "description": "GitLab, CI test loop, documentation and log tools for DevAssist.",
+        "x-ms-agentic-protocol": "mcp-streamable-1.0",
+        "operationId": "InvokeMCP",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    }
+  }
+}

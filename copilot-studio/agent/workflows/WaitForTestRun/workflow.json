@@ -1,0 +1,145 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_devassist-rest": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "new_devassist.shared_devassist-rest"
+        },
+        "api": {
+          "name": "shared_devassist-rest"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Skills",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "title": "sessionId",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "The sessionId returned by StartTestSession",
+                  "x-ms-content-hint": "TEXT"
+                }
+              },
+              "required": [
+                "text"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Initialize_status": {
+          "type": "InitializeVariable",
+          "runAfter": {},
+          "inputs": {
+            "variables": [
+              {
+                "name": "status",
+                "type": "string",
+                "value": "running"
+              }
+            ]
+          }
+        },
+        "Wait_for_CI": {
+          "type": "Until",
+          "runAfter": {
+            "Initialize_status": [
+              "Succeeded"
+            ]
+          },
+          "expression": "@not(equals(variables('status'), 'running'))",
+          "limit": {
+            "count": 80,
+            "timeout": "PT40M"
+          },
+          "actions": {
+            "Get_test_run": {
+              "type": "OpenApiConnection",
+              "runAfter": {},
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_devassist-rest",
+                  "operationId": "GetTestRun",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_devassist-rest"
+                },
+                "parameters": {
+                  "body/sessionId": "@triggerBody()['text']",
+                  "body/waitSeconds": 25
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Set_status": {
+              "type": "SetVariable",
+              "runAfter": {
+                "Get_test_run": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "name": "status",
+                "value": "@{body('Get_test_run')?['status']}"
+              }
+            }
+          }
+        },
+        "Respond_to_the_agent": {
+          "type": "Response",
+          "kind": "Skills",
+          "runAfter": {
+            "Wait_for_CI": [
+              "Succeeded",
+              "TimedOut",
+              "Failed"
+            ]
+          },
+          "inputs": {
+            "statusCode": 200,
+            "body": {
+              "status": "@variables('status')",
+              "result": "@{string(body('Get_test_run'))}"
+            },
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "title": "status",
+                  "type": "string",
+                  "x-ms-dynamically-added": true
+                },
+                "result": {
+                  "title": "result",
+                  "type": "string",
+                  "x-ms-dynamically-added": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "outputs": {}
+    }
+  },
+  "schemaVersion": "1.0.0.0"
+}

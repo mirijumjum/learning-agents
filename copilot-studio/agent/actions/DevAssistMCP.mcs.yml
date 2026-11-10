@@ -1,0 +1,22 @@
+# The DevAssist MCP server as one tool. Copilot Studio lists every MCP tool (tools/list) and
+# keeps the list in sync with the server, so tool names and descriptions live in code
+# (src/devassist_copilot/tools.py), not here.
+mcs.metadata:
+  componentName: DevAssist MCP
+  description: GitLab, unit tests run in GitLab CI, documentation merge requests and read-only log analysis.
+kind: TaskDialog
+modelDisplayName: DevAssist
+modelDescription: >-
+  DevAssist tools for GitLab projects: start and run unit-test sessions in GitLab CI, open
+  documentation and changelog merge requests, list merge requests, create branches, comment,
+  create issues, read pipeline status and failed job logs, and investigate errors in the logs.
+action:
+  kind: InvokeExternalAgentTaskAction
+  connectionReference: new_devassist.shared_devassist-mcp
+  connectionProperties:
+    # Invoker: each user signs in (OAuth 2.0 with Entra ID), so GitLab actions are attributed
+    # to them. Use Maker only with the API-key connection during the pilot.
+    mode: Invoker
+  operationDetails:
+    kind: ModelContextProtocolMetadata
+    operationId: InvokeMCP
