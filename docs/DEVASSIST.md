@@ -9,6 +9,8 @@ o tener un tenant (GPT-5 en Azure, Teams real, Key Vault, Bot Service, presupues
 como código y configuración: el paso a producción es **cambiar variables de entorno y desplegar**,
 no reescribir.
 
+¿Otras formas de hacerlo sin Foundry? Mira la comparativa en [ALTERNATIVAS.md](ALTERNATIVAS.md).
+
 ## Índice
 
 - [Resumen en una tabla](#resumen-en-una-tabla)
