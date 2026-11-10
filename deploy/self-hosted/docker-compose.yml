@@ -1,0 +1,104 @@
+# DevAssist with no AI cloud: the models run on your own GPU server.
+# Only Teams traffic goes through Microsoft (Bot Connector -> Caddy -> DevAssist).
+#
+#   cp .env.example .env              # then fill it in
+#   docker compose up -d              # DevAssist + Caddy + Ollama on CPU (no NVIDIA needed)
+#   docker compose --profile gpu up -d   # adds vLLM on an NVIDIA GPU
+#
+# With --profile gpu, point DevAssist at vLLM in .env:
+#   OPENAI_COMPATIBLE_BASE_URL=http://vllm:8000/v1
+#
+# Every service listens on the internal network only, except Caddy (80/443).
+
+name: devassist
+
+services:
+  caddy:
+    image: caddy:${CADDY_TAG:-2.10}
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DEVASSIST_DOMAIN: ${DEVASSIST_DOMAIN:?set DEVASSIST_DOMAIN in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - devassist
+
+  devassist:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.devassist
+    image: devassist:self-hosted
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DEVASSIST_PROFILE: openai-compatible
+      DEVASSIST_AUDIT_PATH: /data/audit.jsonl
+      DEVASSIST_LOG_PATH: /data/logs.jsonl
+    expose:
+      - "3978"
+    volumes:
+      - devassist-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3978/healthz', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Small setups and machines without NVIDIA. CPU only as written: slow, but it runs anywhere.
+  # On an NVIDIA host, uncomment `gpus: all` to use the GPU.
+  ollama:
+    image: ollama/ollama:${OLLAMA_TAG:-0.12.3}
+    restart: unless-stopped
+    expose:
+      - "11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    # gpus: all
+
+  # One-shot: downloads the models Ollama serves. Safe to re-run; it skips what is already there.
+  ollama-pull:
+    image: ollama/ollama:${OLLAMA_TAG:-0.12.3}
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["/bin/sh", "-c", "ollama pull \"$$OPENAI_COMPATIBLE_MODEL_STRONG\" && ollama pull \"$$OPENAI_COMPATIBLE_MODEL_FAST\""]
+    env_file: .env
+    depends_on:
+      - ollama
+    restart: "no"
+
+  # Production model server. Needs an NVIDIA GPU and the NVIDIA Container Toolkit.
+  # One vLLM process serves one model: the default serves the same model for both tiers.
+  # For two models, copy this service as vllm-fast and set OPENAI_COMPATIBLE_BASE_URL_FAST.
+  vllm:
+    profiles: ["gpu"]
+    image: vllm/vllm-openai:${VLLM_TAG:-v0.10.2}
+    restart: unless-stopped
+    ipc: host
+    gpus: all
+    expose:
+      - "8000"
+    environment:
+      HF_TOKEN: ${HF_TOKEN:-}
+      VLLM_API_KEY: ${OPENAI_COMPATIBLE_API_KEY:?set OPENAI_COMPATIBLE_API_KEY in .env}
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+    command: >
+      --model ${VLLM_MODEL:-openai/gpt-oss-20b}
+      --served-model-name ${OPENAI_COMPATIBLE_MODEL_STRONG:-gpt-oss-20b}
+      --enable-auto-tool-choice
+      --tool-call-parser ${VLLM_TOOL_PARSER:-openai}
+      --max-model-len ${VLLM_MAX_MODEL_LEN:-32768}
+      --gpu-memory-utilization ${VLLM_GPU_MEMORY_UTILIZATION:-0.90}
+      ${VLLM_EXTRA_ARGS:-}
+
+volumes:
+  caddy-data:
+  caddy-config:
+  devassist-data:
+  ollama-models:
+  hf-cache:

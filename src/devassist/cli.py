@@ -22,7 +22,7 @@ import httpx
 
 from devassist.audit import AuditLog, RequestContext
 from devassist.config import PROFILES, ConfigError, Settings, load_dotenv_file
-from devassist.llm import model_name
+from devassist.llm import model_name, server_url
 
 
 def _settings(args: argparse.Namespace) -> Settings:
@@ -53,6 +53,20 @@ def _doctor(args: argparse.Namespace) -> int:
                 report(model in names, f"model {model}", f"run: ollama pull {model}")
         except httpx.HTTPError:
             report(False, "Ollama is running", "start the Ollama app")
+    if settings.profile == "openai-compatible":
+        headers = {"Authorization": f"Bearer {settings.openai_compat_api_key}"} if settings.openai_compat_api_key else {}
+        for tier in ("strong", "fast"):
+            url, model = server_url(settings, tier), model_name(settings, tier)
+            try:
+                response = httpx.get(f"{url}/models", headers=headers, timeout=10)
+                if response.status_code != 200:
+                    report(False, f"model server at {url}", f"HTTP {response.status_code}")
+                    continue
+                served = {m.get("id") for m in response.json().get("data", [])}
+                report(True, f"model server at {url}")
+                report(model in served, f"model {model}", f"the server offers: {', '.join(sorted(filter(None, served))) or 'nothing'}")
+            except (httpx.HTTPError, ValueError):
+                report(False, f"model server at {url}", "is it running and reachable?")
     try:
         response = httpx.get(f"{settings.gitlab_url}/api/v4/projects", headers={"PRIVATE-TOKEN": settings.gitlab_token}, params={"simple": "true", "per_page": 1}, timeout=10)
         report(response.status_code == 200, f"GitLab at {settings.gitlab_url}", f"HTTP {response.status_code}")

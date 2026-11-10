@@ -262,7 +262,9 @@ Con `TEAMS_NOTIFY_WEBHOOK_URL` (un flujo de Workflows de Teams), los resultados 
 | `devassist usage` | Tokens, coste y feedback acumulados |
 | `devassist package --bot-id … --developer … --website … --privacy-url … --terms-url …` | Genera el zip para Teams y Copilot |
 
-Todos aceptan `--profile mock|ollama|azure` para cambiar de modelos sin tocar el `.env`.
+Todos aceptan `--profile mock|ollama|azure|openai-compatible` para cambiar de modelos sin tocar el `.env`.
+`openai-compatible` sirve para cualquier servidor propio (vLLM, Ollama, llama.cpp): ver
+[ALTERNATIVA-self-hosted.md](ALTERNATIVA-self-hosted.md).
 
 ## Pruebas y resultados
 
@@ -411,7 +413,7 @@ az containerapp update --name devassist-app --resource-group rg-devassist --set-
 src/devassist/
   orchestrator.py    enrutado, sesiones, feedback
   specialists.py     agentes de tests, docs, Git y trazas
-  llm.py             qué modelo usa cada agente (Ollama / Azure), límites, tiempos
+  llm.py             qué modelo usa cada agente (Ollama / Azure / servidor propio), límites, tiempos
   gitlab.py          cliente de GitLab con lista blanca de operaciones
   logstore.py        logs: JSONL, Log Analytics, Elasticsearch; rangos de tiempo; agrupado
   masking.py         enmascarado de datos personales y secretos

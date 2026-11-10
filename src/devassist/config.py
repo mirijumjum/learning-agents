@@ -1,7 +1,8 @@
 """All configuration comes from environment variables.
 
 Moving from the free local setup to the paid one means changing these values,
-never the code: DEVASSIST_PROFILE=ollama becomes DEVASSIST_PROFILE=azure.
+never the code: DEVASSIST_PROFILE=ollama becomes DEVASSIST_PROFILE=azure, or
+DEVASSIST_PROFILE=openai-compatible for a self-hosted model server such as vLLM.
 """
 
 from __future__ import annotations
@@ -12,7 +13,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
-PROFILES = ("mock", "ollama", "azure")
+PROFILES = ("mock", "ollama", "azure", "openai-compatible")
+REASONING_MODES = ("effort", "thinking-flag", "omit")
 
 
 class ConfigError(RuntimeError):
@@ -50,6 +52,18 @@ class Settings:
     azure_deployment_fast: str = "gpt-5-mini"
     azure_api_version: str = ""
 
+    # Any OpenAI-compatible server: vLLM, Ollama's /v1, llama.cpp server, LiteLLM...
+    # reasoning mode, how DEVASSIST_REASONING_EFFORT reaches the server:
+    #   effort         reasoning_effort field (gpt-oss on vLLM, Ollama)
+    #   thinking-flag  chat_template_kwargs.enable_thinking (Qwen3 on vLLM: "none" turns thinking off)
+    #   omit           send nothing; the server's defaults apply
+    openai_compat_base_url: str = ""
+    openai_compat_base_url_fast: str = ""  # only when the fast model runs on another server; empty: same server
+    openai_compat_api_key: str = ""
+    openai_compat_model_strong: str = ""
+    openai_compat_model_fast: str = ""
+    openai_compat_reasoning_mode: str = "effort"
+
     # GitLab
     gitlab_url: str = "http://127.0.0.1:8929"
     gitlab_token: str = "local-dev-token"
@@ -71,7 +85,7 @@ class Settings:
     max_diff_chars: int = 60_000
     max_input_chars: int = 48_000
     max_output_tokens: int = 4_000
-    reasoning_effort: str = ""  # empty: "none" on Ollama, "low" on Azure
+    reasoning_effort: str = ""  # empty: "none" on Ollama and openai-compatible, "low" on Azure
     llm_timeout_seconds: float = 180.0
     max_test_attempts: int = 3
     pipeline_timeout_seconds: float = 900.0
@@ -123,6 +137,12 @@ class Settings:
             azure_deployment_strong=text("AZURE_OPENAI_DEPLOYMENT_STRONG", defaults.azure_deployment_strong),
             azure_deployment_fast=text("AZURE_OPENAI_DEPLOYMENT_FAST", defaults.azure_deployment_fast),
             azure_api_version=text("AZURE_OPENAI_API_VERSION", ""),
+            openai_compat_base_url=text("OPENAI_COMPATIBLE_BASE_URL", "").rstrip("/"),
+            openai_compat_base_url_fast=text("OPENAI_COMPATIBLE_BASE_URL_FAST", "").rstrip("/"),
+            openai_compat_api_key=text("OPENAI_COMPATIBLE_API_KEY", ""),
+            openai_compat_model_strong=text("OPENAI_COMPATIBLE_MODEL_STRONG", ""),
+            openai_compat_model_fast=text("OPENAI_COMPATIBLE_MODEL_FAST", ""),
+            openai_compat_reasoning_mode=text("OPENAI_COMPATIBLE_REASONING_MODE", defaults.openai_compat_reasoning_mode),
             gitlab_url=text("GITLAB_URL", defaults.gitlab_url).rstrip("/"),
             gitlab_token=text("GITLAB_TOKEN", defaults.gitlab_token),
             gitlab_projects=_csv(e.get("GITLAB_PROJECTS")),
@@ -159,6 +179,16 @@ class Settings:
             raise ConfigError(f"DEVASSIST_PROFILE must be one of {', '.join(PROFILES)}, got {self.profile!r}")
         if self.profile == "azure" and not self.azure_endpoint:
             raise ConfigError("DEVASSIST_PROFILE=azure needs AZURE_OPENAI_ENDPOINT.")
+        if self.profile == "openai-compatible":
+            missing = [name for name, value in (
+                ("OPENAI_COMPATIBLE_BASE_URL", self.openai_compat_base_url),
+                ("OPENAI_COMPATIBLE_MODEL_STRONG", self.openai_compat_model_strong),
+                ("OPENAI_COMPATIBLE_MODEL_FAST", self.openai_compat_model_fast),
+            ) if not value]
+            if missing:
+                raise ConfigError(f"DEVASSIST_PROFILE=openai-compatible needs {', '.join(missing)}.")
+            if self.openai_compat_reasoning_mode not in REASONING_MODES:
+                raise ConfigError(f"OPENAI_COMPATIBLE_REASONING_MODE must be one of {', '.join(REASONING_MODES)}, got {self.openai_compat_reasoning_mode!r}")
         if self.log_store not in ("jsonl", "azure", "elasticsearch"):
             raise ConfigError(f"DEVASSIST_LOG_STORE must be jsonl, azure or elasticsearch, got {self.log_store!r}")
         if self.max_test_attempts < 1:

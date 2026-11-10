@@ -7,6 +7,10 @@
     test     strong   qwen3:8b                gpt-5
     docs     strong   qwen3:8b                gpt-5
     trace_complex  strong (incidents with many distinct errors)
+
+The openai-compatible profile takes both model names from configuration, so any
+self-hosted server works (vLLM, Ollama's /v1, llama.cpp, LiteLLM), for example
+Qwen3-30B-A3B as strong and Qwen3-8B as fast.
 """
 
 from __future__ import annotations
@@ -35,14 +39,37 @@ def model_name(settings: Settings, tier: str) -> str:
         return settings.ollama_model_strong if tier == "strong" else settings.ollama_model_fast
     if settings.profile == "azure":
         return settings.azure_deployment_strong if tier == "strong" else settings.azure_deployment_fast
+    if settings.profile == "openai-compatible":
+        return settings.openai_compat_model_strong if tier == "strong" else settings.openai_compat_model_fast
     return "mock"
+
+
+def server_url(settings: Settings, tier: str) -> str:
+    """openai-compatible only: vLLM serves one model per process, so the fast model may live elsewhere."""
+    if tier == "fast" and settings.openai_compat_base_url_fast:
+        return settings.openai_compat_base_url_fast
+    return settings.openai_compat_base_url
 
 
 def reasoning_effort(settings: Settings) -> str:
     """Reasoning tokens count against max_tokens. Left unlimited, they crowd out the actual answer."""
     if settings.profile == "mock":
         return ""
-    return settings.reasoning_effort or ("none" if settings.profile == "ollama" else "low")
+    return settings.reasoning_effort or ("low" if settings.profile == "azure" else "none")
+
+
+def reasoning_options(settings: Settings, effort: str) -> dict[str, Any]:
+    """Turn an effort level into what this server understands.
+
+    Qwen3 on vLLM ignores reasoning_effort and only stops thinking through its chat template.
+    """
+    if not effort:
+        return {}
+    if settings.profile != "openai-compatible" or settings.openai_compat_reasoning_mode == "effort":
+        return {"reasoning_effort": effort}
+    if settings.openai_compat_reasoning_mode == "thinking-flag":
+        return {"extra_body": {"chat_template_kwargs": {"enable_thinking": effort != "none"}}}
+    return {}
 
 
 def _make_client(settings: Settings, role: str, tier: str) -> Any:
@@ -56,6 +83,9 @@ def _make_client(settings: Settings, role: str, tier: str) -> Any:
     model = model_name(settings, tier)
     if settings.profile == "ollama":
         return OpenAIChatCompletionClient(model=model, api_key="ollama", base_url=settings.ollama_base_url)
+    if settings.profile == "openai-compatible":
+        # Servers started without a key accept any value, but the OpenAI client insists on one.
+        return OpenAIChatCompletionClient(model=model, api_key=settings.openai_compat_api_key or "not-needed", base_url=server_url(settings, tier))
 
     kwargs: dict[str, Any] = {"model": model, "azure_endpoint": settings.azure_endpoint}
     if settings.azure_api_version:
@@ -90,8 +120,7 @@ class LLM:
         agent = Agent(self._client(role), instructions, name=role, tools=list(tools or []))
         options: dict[str, Any] = {"max_tokens": self.settings.max_output_tokens * (3 if deliberate else 1)}
         effort = DELIBERATE_EFFORT if deliberate and self.settings.profile != "mock" else reasoning_effort(self.settings)
-        if effort:
-            options["reasoning_effort"] = effort
+        options.update(reasoning_options(self.settings, effort))
         try:
             response = await asyncio.wait_for(agent.run(prompt[: self.settings.max_input_chars], options=options), timeout=self.settings.llm_timeout_seconds)
         except asyncio.TimeoutError:

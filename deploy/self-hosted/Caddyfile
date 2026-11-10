@@ -1,0 +1,23 @@
+# TLS terminator in front of DevAssist.
+# A public name (bot.example.com) gets a Let's Encrypt certificate automatically: ports 80 and
+# 443 must be reachable from the internet. Teams' Bot Connector only calls HTTPS endpoints with
+# a publicly trusted certificate. "localhost" gets a certificate from Caddy's own local CA, for trials.
+{$DEVASSIST_DOMAIN} {
+	encode gzip
+
+	# Teams (Bot Connector). DevAssist checks the Bot Service token on every request.
+	handle /api/messages {
+		reverse_proxy devassist:3978
+	}
+
+	# GitLab webhooks. DevAssist checks X-Gitlab-Token. Restrict to GitLab's address if you can:
+	# @gitlab remote_ip 10.0.0.0/8
+	handle /webhooks/gitlab {
+		reverse_proxy devassist:3978
+	}
+
+	# Nothing else is published: not /healthz, and never the model server.
+	handle {
+		respond 404
+	}
+}
