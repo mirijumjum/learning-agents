@@ -1,0 +1,354 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/copilot/plugin/v2.4/schema.json",
+  "schema_version": "v2.4",
+  "name_for_human": "DevAssist GitLab",
+  "namespace": "devassist",
+  "description_for_human": "Tests in GitLab CI, docs as merge requests, branches, issues and log analysis.",
+  "description_for_model": "Tools for software development work in the company's GitLab: read merge requests and code, run AI-written unit tests in GitLab CI and open merge requests only when they pass, propose documentation as merge requests, create branches, comments and issues, explain red pipelines and count errors in application logs. It never merges, deploys or deletes.",
+  "contact_email": "${{DEVASSIST_CONTACT_EMAIL}}",
+  "privacy_policy_url": "${{DEVASSIST_PRIVACY_URL}}",
+  "legal_info_url": "${{DEVASSIST_TERMS_URL}}",
+  "functions": [
+    {
+      "name": "listProjects",
+      "description": "List the GitLab projects DevAssist may use.",
+      "capabilities": {
+        "security_info": {
+          "data_handling": [
+            "GetPrivateData"
+          ]
+        },
+        "confirmation": {
+          "type": "None",
+          "isNonConsequential": true
+        }
+      }
+    },
+    {
+      "name": "listMergeRequests",
+      "description": "List merge requests of a project; assignedToMe=true for the signed-in user's merge requests.",
+      "capabilities": {
+        "security_info": {
+          "data_handling": [
+            "GetPrivateData"
+          ]
+        },
+        "confirmation": {
+          "type": "None",
+          "isNonConsequential": true
+        }
+      }
+    },
+    {
+      "name": "getMergeRequestChanges",
+      "description": "Read a merge request's diff, changed source files, an example test and the testing rules. Call before writing tests for a merge request.",
+      "capabilities": {
+        "security_info": {
+          "data_handling": [
+            "GetPrivateData"
+          ]
+        },
+        "confirmation": {
+          "type": "None",
+          "isNonConsequential": true
+        }
+      }
+    },
+    {
+      "name": "listFiles",
+      "description": "List file paths in a branch, optionally filtered by text in the path.",
+      "capabilities": {
+        "security_info": {
+          "data_handling": [
+            "GetPrivateData"
+          ]
+        },
+        "confirmation": {
+          "type": "None",
+          "isNonConsequential": true
+        }
+      }
+    },
+    {
+      "name": "getFileContent",
+      "description": "Read one file from a branch.",
+      "capabilities": {
+        "security_info": {
+          "data_handling": [
+            "GetPrivateData"
+          ]
+        },
+        "confirmation": {
+          "type": "None",
+          "isNonConsequential": true
+        }
+      }
+    },
+    {
+      "name": "getPipelineStatus",
+      "description": "Get the status of one CI pipeline.",
+      "capabilities": {
+        "security_info": {
+          "data_handling": [
+            "GetPrivateData"
+          ]
+        },
+        "confirmation": {
+          "type": "None",
+          "isNonConsequential": true
+        }
+      }
+    },
+    {
+      "name": "getPipelineFailure",
+      "description": "For a red pipeline, get the failed job and the masked end of its log.",
+      "capabilities": {
+        "security_info": {
+          "data_handling": [
+            "GetPrivateData"
+          ]
+        },
+        "confirmation": {
+          "type": "None",
+          "isNonConsequential": true
+        }
+      }
+    },
+    {
+      "name": "searchIncidentLogs",
+      "description": "Count and group errors in the application logs for the time range in the question, with masked samples and deployments in that window.",
+      "capabilities": {
+        "security_info": {
+          "data_handling": [
+            "GetPrivateData"
+          ]
+        },
+        "confirmation": {
+          "type": "None",
+          "isNonConsequential": true
+        }
+      }
+    },
+    {
+      "name": "getTestRun",
+      "description": "Check a test run started with startTestRun: status, pipeline result, counts, coverage, failure log or merge request.",
+      "capabilities": {
+        "security_info": {
+          "data_handling": [
+            "GetPrivateData"
+          ]
+        },
+        "confirmation": {
+          "type": "None",
+          "isNonConsequential": true
+        }
+      },
+      "states": {
+        "responding": {
+          "instructions": [
+            "Follow next_step in the response.",
+            "Only report numbers present in the response (tests_added, tests_passed, tests_failed, coverage_before, coverage_after). Never invent them.",
+            "Include merge_request_url and pipeline_url as links when present."
+          ]
+        }
+      }
+    },
+    {
+      "name": "createBranch",
+      "description": "Create a branch from an existing branch.",
+      "capabilities": {
+        "security_info": {
+          "data_handling": [
+            "ResourceStateUpdate"
+          ]
+        },
+        "confirmation": {
+          "type": "AdaptiveCard",
+          "title": "Create branch",
+          "body": "DevAssist will create a new branch in GitLab. Continue?"
+        }
+      }
+    },
+    {
+      "name": "commentOnMergeRequest",
+      "description": "Add a comment to a merge request.",
+      "capabilities": {
+        "security_info": {
+          "data_handling": [
+            "ResourceStateUpdate"
+          ]
+        },
+        "confirmation": {
+          "type": "AdaptiveCard",
+          "title": "Comment on merge request",
+          "body": "DevAssist will post a comment on the merge request in GitLab. Continue?"
+        }
+      }
+    },
+    {
+      "name": "createIssue",
+      "description": "Create a GitLab issue.",
+      "capabilities": {
+        "security_info": {
+          "data_handling": [
+            "ResourceStateUpdate"
+          ]
+        },
+        "confirmation": {
+          "type": "AdaptiveCard",
+          "title": "Create issue",
+          "body": "DevAssist will create an issue in GitLab. Continue?"
+        }
+      }
+    },
+    {
+      "name": "startTestRun",
+      "description": "Commit an AI-written test file to a new ai/tests-* branch and run it in GitLab CI. Returns at once with a run_id; CI takes minutes.",
+      "capabilities": {
+        "security_info": {
+          "data_handling": [
+            "ResourceStateUpdate"
+          ]
+        },
+        "confirmation": {
+          "type": "AdaptiveCard",
+          "title": "Run tests in GitLab CI",
+          "body": "DevAssist will commit the test file to a new ai/tests-* branch and run the CI pipeline. A merge request is opened only if it passes. Continue?"
+        }
+      },
+      "states": {
+        "responding": {
+          "instructions": [
+            "Tell the user the tests were committed and CI is running, with the branch and run_id.",
+            "Do not claim any result yet. Offer to check the result later with getTestRun."
+          ]
+        }
+      }
+    },
+    {
+      "name": "retryTestRun",
+      "description": "Commit a corrected test file to the run's branch and run CI again.",
+      "capabilities": {
+        "security_info": {
+          "data_handling": [
+            "ResourceStateUpdate"
+          ]
+        },
+        "confirmation": {
+          "type": "AdaptiveCard",
+          "title": "Run corrected tests",
+          "body": "Commit the corrected test file and run the pipeline again?"
+        }
+      }
+    },
+    {
+      "name": "reportBugInCode",
+      "description": "Close a failed test run without a merge request because the code under test is wrong.",
+      "capabilities": {
+        "security_info": {
+          "data_handling": [
+            "ResourceStateUpdate"
+          ]
+        },
+        "confirmation": {
+          "type": "AdaptiveCard",
+          "title": "Report bug",
+          "body": "Close this test run and report the bug instead of opening a merge request?"
+        }
+      }
+    },
+    {
+      "name": "proposeApiReference",
+      "description": "Open a merge request that writes docs/api.md and links it from the README.",
+      "capabilities": {
+        "security_info": {
+          "data_handling": [
+            "ResourceStateUpdate"
+          ]
+        },
+        "confirmation": {
+          "type": "AdaptiveCard",
+          "title": "Open documentation MR",
+          "body": "DevAssist will open a merge request that adds docs/api.md. Continue?"
+        }
+      }
+    },
+    {
+      "name": "proposeChangelog",
+      "description": "Open a merge request that updates CHANGELOG.md from merged merge requests.",
+      "capabilities": {
+        "security_info": {
+          "data_handling": [
+            "ResourceStateUpdate"
+          ]
+        },
+        "confirmation": {
+          "type": "AdaptiveCard",
+          "title": "Open changelog MR",
+          "body": "DevAssist will open a merge request that updates CHANGELOG.md. Continue?"
+        }
+      }
+    },
+    {
+      "name": "proposeCodeComments",
+      "description": "Open a merge request that adds docstrings to one Python file. Rejected if code changes.",
+      "capabilities": {
+        "security_info": {
+          "data_handling": [
+            "ResourceStateUpdate"
+          ]
+        },
+        "confirmation": {
+          "type": "AdaptiveCard",
+          "title": "Open code comments MR",
+          "body": "DevAssist will open a merge request that adds docstrings to the file. Continue?"
+        }
+      }
+    }
+  ],
+  "runtimes": [
+    {
+      "type": "OpenApi",
+      "auth": {
+        "type": "OAuthPluginVault",
+        "reference_id": "${{ENTRA_SSO_CONFIGURATION_ID}}"
+      },
+      "spec": {
+        "url": "apiSpecificationFile/devassist-actions.yml",
+        "progress_style": "ShowUsageWithInput"
+      },
+      "run_for_functions": [
+        "listProjects",
+        "listMergeRequests",
+        "getMergeRequestChanges",
+        "listFiles",
+        "getFileContent",
+        "getPipelineStatus",
+        "getPipelineFailure",
+        "searchIncidentLogs",
+        "getTestRun",
+        "createBranch",
+        "commentOnMergeRequest",
+        "createIssue",
+        "startTestRun",
+        "retryTestRun",
+        "reportBugInCode",
+        "proposeApiReference",
+        "proposeChangelog",
+        "proposeCodeComments"
+      ]
+    }
+  ],
+  "capabilities": {
+    "conversation_starters": [
+      {
+        "title": "Tests for a merge request",
+        "text": "Generate unit tests for OrderService in MR !231 of payments-api"
+      },
+      {
+        "title": "Red pipeline",
+        "text": "Why is pipeline #5512 of payments-api red?"
+      }
+    ]
+  }
+}

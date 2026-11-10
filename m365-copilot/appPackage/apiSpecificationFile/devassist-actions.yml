@@ -1,0 +1,764 @@
+openapi: 3.0.1
+info:
+  title: DevAssist actions
+  description: >-
+    GitLab, CI and log tools for DevAssist, the development agent. It reads merge requests and code,
+    runs AI-written unit tests in GitLab CI and opens merge requests for review, proposes documentation
+    as merge requests, manages branches, comments and issues, and returns masked error counts from
+    application logs. It never merges, deploys or deletes.
+  version: 1.0.0
+servers:
+  - url: ${{DEVASSIST_ACTIONS_URL}}/api
+    description: DevAssist actions API
+security:
+  - entraAuthCode:
+      - api://${{AAD_APP_CLIENT_ID}}/DevAssist.Use
+paths:
+  /projects:
+    get:
+      operationId: listProjects
+      summary: List the GitLab projects DevAssist may use
+      description: Returns the full paths of the projects enabled for DevAssist. Use it when the user does not name a project or names one ambiguously.
+      responses:
+        '200':
+          description: Enabled projects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  projects:
+                    type: array
+                    items:
+                      type: string
+  /merge-requests:
+    get:
+      operationId: listMergeRequests
+      summary: List merge requests of a project
+      description: Lists merge requests of a GitLab project, optionally only those assigned to the signed-in user.
+      parameters:
+        - $ref: '#/components/parameters/project'
+        - name: state
+          in: query
+          description: opened, merged, closed or all. Defaults to opened.
+          required: false
+          schema:
+            type: string
+            enum: [opened, merged, closed, all]
+        - name: assignedToMe
+          in: query
+          description: true to list only merge requests assigned to the person asking.
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Merge requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MergeRequestList'
+        '400':
+          $ref: '#/components/responses/Error'
+  /merge-requests/changes:
+    get:
+      operationId: getMergeRequestChanges
+      summary: Read a merge request to write tests for it
+      description: >-
+        Returns the diff of a merge request, the full content of the changed source files, one existing
+        test file to copy its style, and the team's testing rules if the repository has them. Call it
+        before writing unit tests for a merge request.
+      parameters:
+        - $ref: '#/components/parameters/project'
+        - name: iid
+          in: query
+          description: Merge request number, for example 231 for !231.
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Merge request diff and sources
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MergeRequestChanges'
+        '400':
+          $ref: '#/components/responses/Error'
+  /merge-requests/comments:
+    post:
+      operationId: commentOnMergeRequest
+      summary: Comment on a merge request
+      description: Adds a comment to a merge request.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [project, iid, body]
+              properties:
+                project:
+                  type: string
+                  description: Project name or full path, for example payments-api.
+                iid:
+                  type: integer
+                  description: Merge request number.
+                body:
+                  type: string
+                  description: Comment text in Markdown.
+      responses:
+        '201':
+          description: Comment added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Created'
+        '400':
+          $ref: '#/components/responses/Error'
+  /files:
+    get:
+      operationId: listFiles
+      summary: List files in a repository
+      description: Lists file paths in a branch of a project, optionally only paths that contain some text (for example "controller" or "OrderService").
+      parameters:
+        - $ref: '#/components/parameters/project'
+        - $ref: '#/components/parameters/ref'
+        - name: pathContains
+          in: query
+          description: Only return paths that contain this text, case-insensitive.
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File paths
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  project:
+                    type: string
+                  ref:
+                    type: string
+                  files:
+                    type: array
+                    items:
+                      type: string
+                  truncated:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/Error'
+  /files/content:
+    get:
+      operationId: getFileContent
+      summary: Read one file
+      description: Returns the content of one file in a branch. Long files are truncated.
+      parameters:
+        - $ref: '#/components/parameters/project'
+        - $ref: '#/components/parameters/ref'
+        - name: path
+          in: query
+          description: File path in the repository, for example app/order_service.py.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File content
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  project:
+                    type: string
+                  ref:
+                    type: string
+                  path:
+                    type: string
+                  content:
+                    type: string
+                  truncated:
+                    type: boolean
+        '404':
+          $ref: '#/components/responses/Error'
+  /branches:
+    post:
+      operationId: createBranch
+      summary: Create a branch
+      description: Creates a branch from an existing branch. It never deletes or force-pushes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [project, branch, ref]
+              properties:
+                project:
+                  type: string
+                  description: Project name or full path.
+                branch:
+                  type: string
+                  description: Name of the new branch, for example feature/invoice-pdf.
+                ref:
+                  type: string
+                  description: Existing branch to create it from, for example develop.
+      responses:
+        '201':
+          description: Branch created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Created'
+        '400':
+          $ref: '#/components/responses/Error'
+  /pipelines/status:
+    get:
+      operationId: getPipelineStatus
+      summary: Get the status of a pipeline
+      description: Returns the status, branch and coverage of one CI pipeline.
+      parameters:
+        - $ref: '#/components/parameters/project'
+        - $ref: '#/components/parameters/pipelineId'
+      responses:
+        '200':
+          description: Pipeline status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  project:
+                    type: string
+                  id:
+                    type: integer
+                  status:
+                    type: string
+                  ref:
+                    type: string
+                  coverage:
+                    type: string
+                    nullable: true
+                  web_url:
+                    type: string
+        '404':
+          $ref: '#/components/responses/Error'
+  /pipelines/failure:
+    get:
+      operationId: getPipelineFailure
+      summary: Explain why a pipeline is red
+      description: For a failed pipeline, returns the failed job and the end of its log with personal data masked. Diagnose the cause from the log.
+      parameters:
+        - $ref: '#/components/parameters/project'
+        - $ref: '#/components/parameters/pipelineId'
+      responses:
+        '200':
+          description: Failed job and log tail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  project:
+                    type: string
+                  id:
+                    type: integer
+                  status:
+                    type: string
+                  web_url:
+                    type: string
+                  job_name:
+                    type: string
+                  stage:
+                    type: string
+                  job_url:
+                    type: string
+                  log_tail:
+                    type: string
+                  note:
+                    type: string
+        '404':
+          $ref: '#/components/responses/Error'
+  /issues:
+    post:
+      operationId: createIssue
+      summary: Create an issue
+      description: Creates a GitLab issue, for example with a root-cause diagnosis the user asked to file.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [project, title]
+              properties:
+                project:
+                  type: string
+                  description: Project name or full path.
+                title:
+                  type: string
+                  description: Issue title.
+                description:
+                  type: string
+                  description: Issue description in Markdown.
+      responses:
+        '201':
+          description: Issue created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Created'
+        '400':
+          $ref: '#/components/responses/Error'
+  /test-runs:
+    post:
+      operationId: startTestRun
+      summary: Commit AI-written tests and run them in GitLab CI
+      description: >-
+        Starts a test run. The service creates an ai/tests-* branch, commits the test file, triggers the
+        project's normal CI pipeline and returns at once with a run_id. CI takes minutes: tell the user it
+        is running and check later with getTestRun. A merge request is opened automatically only if the
+        pipeline passes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [project, testFilePath, testFileContent]
+              properties:
+                project:
+                  type: string
+                  description: Project name or full path.
+                mergeRequestIid:
+                  type: integer
+                  description: Merge request the tests are for. The tests branch starts from its source branch.
+                ref:
+                  type: string
+                  description: Branch to test when there is no merge request. Defaults to the default branch.
+                label:
+                  type: string
+                  description: Short name of what is tested, for example OrderService.
+                testFilePath:
+                  type: string
+                  description: Path of the new test file, for example tests/test_order_service.py. Must be a test file.
+                testFileContent:
+                  type: string
+                  description: Complete content of the test file.
+      responses:
+        '202':
+          description: Run started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestRun'
+        '400':
+          $ref: '#/components/responses/Error'
+  /test-runs/{runId}:
+    get:
+      operationId: getTestRun
+      summary: Check a test run
+      description: Returns the status of a test run, its pipeline result, test counts, coverage before and after, the failure log when it failed and the merge request when it passed.
+      parameters:
+        - $ref: '#/components/parameters/runId'
+      responses:
+        '200':
+          description: Test run
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestRun'
+        '404':
+          $ref: '#/components/responses/Error'
+  /test-runs/{runId}/attempts:
+    post:
+      operationId: retryTestRun
+      summary: Fix the tests and run them again
+      description: After a failed run where the tests were wrong, commits the corrected test file to the same branch and runs CI again. Limited to the configured number of attempts.
+      parameters:
+        - $ref: '#/components/parameters/runId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [testFileContent]
+              properties:
+                testFileContent:
+                  type: string
+                  description: Complete corrected content of the test file.
+      responses:
+        '202':
+          description: New attempt started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestRun'
+        '409':
+          $ref: '#/components/responses/Error'
+  /test-runs/{runId}/bug:
+    post:
+      operationId: reportBugInCode
+      summary: Stop because the code under test is wrong
+      description: After a failed run where the tests are right and the code is wrong, closes the run without a merge request and records the bug.
+      parameters:
+        - $ref: '#/components/parameters/runId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [summary]
+              properties:
+                summary:
+                  type: string
+                  description: One or two sentences on what the code does wrong.
+      responses:
+        '200':
+          description: Run closed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestRun'
+        '409':
+          $ref: '#/components/responses/Error'
+  /docs/api-reference:
+    post:
+      operationId: proposeApiReference
+      summary: Propose an API reference as a merge request
+      description: Writes docs/api.md with the given Markdown, links it from the README and opens a merge request for review.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [project, content]
+              properties:
+                project:
+                  type: string
+                  description: Project name or full path.
+                content:
+                  type: string
+                  description: Complete Markdown of docs/api.md, written from the controllers you read.
+      responses:
+        '201':
+          description: Merge request opened
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocsResult'
+        '400':
+          $ref: '#/components/responses/Error'
+  /docs/changelog:
+    post:
+      operationId: proposeChangelog
+      summary: Propose a changelog update as a merge request
+      description: Builds CHANGELOG.md from merged merge requests (by code, so no entry is invented) and opens a merge request.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [project]
+              properties:
+                project:
+                  type: string
+                  description: Project name or full path.
+      responses:
+        '201':
+          description: Merge request opened
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocsResult'
+        '400':
+          $ref: '#/components/responses/Error'
+  /docs/code-comments:
+    post:
+      operationId: proposeCodeComments
+      summary: Propose docstrings for one Python file
+      description: Opens a merge request with the file rewritten to add docstrings. Rejected if anything other than documentation changed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [project, path, content]
+              properties:
+                project:
+                  type: string
+                  description: Project name or full path.
+                path:
+                  type: string
+                  description: Path of the Python file.
+                content:
+                  type: string
+                  description: Complete new content of the file, identical code with docstrings added.
+      responses:
+        '201':
+          description: Merge request opened
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocsResult'
+        '400':
+          $ref: '#/components/responses/Error'
+  /incidents:
+    get:
+      operationId: searchIncidentLogs
+      summary: Count and group errors in application logs
+      description: >-
+        Understands the time range in the question (for example "yesterday between 17:00 and 18:00" or
+        "last 2 hours"), reads the logs read-only, groups errors by shape with counts measured by code,
+        masks personal data and lists deployments in that window. Diagnose the root cause from these facts.
+      parameters:
+        - name: question
+          in: query
+          description: The user's question, including its time range.
+          required: true
+          schema:
+            type: string
+        - name: service
+          in: query
+          description: Service name, for example checkout. Optional.
+          required: false
+          schema:
+            type: string
+        - name: project
+          in: query
+          description: GitLab project whose deployments to check. Optional.
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Error groups and deployments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentFacts'
+        '400':
+          $ref: '#/components/responses/Error'
+components:
+  securitySchemes:
+    entraAuthCode:
+      type: oauth2
+      description: Microsoft Entra ID sign-in of the person using DevAssist
+      flows:
+        authorizationCode:
+          authorizationUrl: https://login.microsoftonline.com/${{AAD_APP_TENANT_ID}}/oauth2/v2.0/authorize
+          tokenUrl: https://login.microsoftonline.com/${{AAD_APP_TENANT_ID}}/oauth2/v2.0/token
+          scopes:
+            api://${{AAD_APP_CLIENT_ID}}/DevAssist.Use: Use DevAssist on your behalf
+  parameters:
+    project:
+      name: project
+      in: query
+      description: Project name or full path, for example payments-api or acme/payments-api.
+      required: true
+      schema:
+        type: string
+    ref:
+      name: ref
+      in: query
+      description: Branch name. Defaults to the default branch.
+      required: false
+      schema:
+        type: string
+    pipelineId:
+      name: pipelineId
+      in: query
+      description: Pipeline number, for example 5512.
+      required: true
+      schema:
+        type: integer
+    runId:
+      name: runId
+      in: path
+      description: The run_id returned by startTestRun.
+      required: true
+      schema:
+        type: string
+  responses:
+    Error:
+      description: The request was refused or failed. Tell the user the error message.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+  schemas:
+    Created:
+      type: object
+      properties:
+        project:
+          type: string
+        iid:
+          type: integer
+        web_url:
+          type: string
+    MergeRequestList:
+      type: object
+      properties:
+        project:
+          type: string
+        assignee:
+          type: string
+          nullable: true
+        merge_requests:
+          type: array
+          items:
+            type: object
+            properties:
+              iid:
+                type: integer
+              title:
+                type: string
+              state:
+                type: string
+              source_branch:
+                type: string
+              target_branch:
+                type: string
+              web_url:
+                type: string
+    MergeRequestChanges:
+      type: object
+      properties:
+        project:
+          type: string
+        iid:
+          type: integer
+        title:
+          type: string
+        source_branch:
+          type: string
+        target_branch:
+          type: string
+        web_url:
+          type: string
+        diff:
+          type: string
+        diff_truncated:
+          type: boolean
+        changed_source_files:
+          type: array
+          items:
+            type: object
+            properties:
+              path:
+                type: string
+              content:
+                type: string
+              truncated:
+                type: boolean
+        example_test_path:
+          type: string
+        example_test:
+          type: string
+        testing_rules:
+          type: string
+    TestRun:
+      type: object
+      properties:
+        run_id:
+          type: string
+        status:
+          type: string
+          enum: [starting, running, failed, passed, gave_up, bug_reported, error]
+        next_step:
+          type: string
+        project:
+          type: string
+        label:
+          type: string
+        branch:
+          type: string
+        path:
+          type: string
+        attempt:
+          type: integer
+        attempts_left:
+          type: integer
+        pipeline_url:
+          type: string
+        tests_added:
+          type: integer
+        tests_passed:
+          type: integer
+        tests_failed:
+          type: integer
+        coverage_before:
+          type: number
+          nullable: true
+        coverage_after:
+          type: number
+          nullable: true
+        failure_log:
+          type: string
+        merge_request_url:
+          type: string
+        message:
+          type: string
+    DocsResult:
+      type: object
+      properties:
+        project:
+          type: string
+        summary:
+          type: string
+        merge_request_url:
+          type: string
+    IncidentFacts:
+      type: object
+      properties:
+        service:
+          type: string
+        window_start:
+          type: string
+        window_end:
+          type: string
+        timezone:
+          type: string
+        log_lines_checked:
+          type: integer
+        total_errors:
+          type: integer
+        error_groups:
+          type: array
+          items:
+            type: object
+            properties:
+              count:
+                type: integer
+              first_seen:
+                type: string
+              last_seen:
+                type: string
+              sample:
+                type: string
+        deployments_in_window:
+          type: array
+          items:
+            type: object
+            properties:
+              created_at:
+                type: string
+              environment:
+                type: string
+              ref:
+                type: string
+              sha:
+                type: string
+        note:
+          type: string

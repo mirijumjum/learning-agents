@@ -34,12 +34,14 @@ dev = ["pytest-cov>=5.0", "jsonschema>=4.0", "pillow>=10.0"]
 [project.scripts]
 agent-lab = "agent_lab.cli:main"
 devassist = "devassist.cli:main"
+devassist-actions = "devassist_actions.cli:main"
 
 [tool.setuptools.package-data]
 devassist = ["instructions/*.md", "eval_cases.yaml", "app_package/*.png"]
 
 [tool.setuptools.packages.find]
-where = ["src"]
+# m365-copilot/src: the actions API behind the Microsoft 365 Copilot declarative agent.
+where = ["src", "m365-copilot/src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

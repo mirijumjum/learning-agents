@@ -1,0 +1,42 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/copilot/declarative-agent/v1.9/schema.json",
+  "version": "v1.9",
+  "name": "DevAssist",
+  "description": "Development agent for GitLab: writes unit tests and runs them in GitLab CI, writes documentation as merge requests, manages branches, merge requests and issues, and finds the root cause of failures from logs and pipelines. It never merges, deploys or deletes.",
+  "instructions": "$[file('instruction.txt')]",
+  "conversation_starters": [
+    {
+      "title": "Tests for a merge request",
+      "text": "Generate unit tests for `OrderService` in MR !231 of `payments-api`"
+    },
+    {
+      "title": "Document an API",
+      "text": "Document the public endpoints of `customer-portal` and open an MR"
+    },
+    {
+      "title": "Branch and my MRs",
+      "text": "Create a branch `feature/invoice-pdf` from `develop` in payments-api and list open MRs assigned to me"
+    },
+    {
+      "title": "Incident",
+      "text": "Why did checkout fail yesterday between 17:00 and 18:00?"
+    },
+    {
+      "title": "Red pipeline",
+      "text": "Why is pipeline #5512 of payments-api red?"
+    },
+    {
+      "title": "Test run result",
+      "text": "What is the result of my last test run?"
+    }
+  ],
+  "actions": [
+    {
+      "id": "devassistActions",
+      "file": "ai-plugin.json"
+    }
+  ],
+  "disclaimer": {
+    "text": "DevAssist proposes changes as GitLab branches and merge requests for human review. It never merges, deploys or deletes."
+  }
+}

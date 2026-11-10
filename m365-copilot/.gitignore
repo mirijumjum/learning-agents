@@ -1,0 +1,4 @@
+env/.env.*.user
+appPackage/build/
+build/
+.schemas/

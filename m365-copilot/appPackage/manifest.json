@@ -1,0 +1,37 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.25/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.25",
+  "version": "1.0.0",
+  "id": "${{TEAMS_APP_ID}}",
+  "developer": {
+    "name": "${{DEVASSIST_DEVELOPER_NAME}}",
+    "websiteUrl": "${{DEVASSIST_WEBSITE_URL}}",
+    "privacyUrl": "${{DEVASSIST_PRIVACY_URL}}",
+    "termsOfUseUrl": "${{DEVASSIST_TERMS_URL}}"
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "name": {
+    "short": "DevAssist${{APP_NAME_SUFFIX}}",
+    "full": "DevAssist development agent for Microsoft 365 Copilot"
+  },
+  "description": {
+    "short": "Tests in GitLab CI, docs, GitLab and root-cause analysis in Copilot.",
+    "full": "DevAssist is a Microsoft 365 Copilot agent for the engineering team. It writes unit tests and runs them in GitLab CI, writes technical documentation as merge requests, creates branches, comments and issues, and finds the root cause of failures from application logs and red pipelines. Every change lands on a branch or merge request for human review: it never merges, deploys or deletes."
+  },
+  "accentColor": "#2F6FED",
+  "copilotAgents": {
+    "declarativeAgents": [
+      {
+        "id": "devassistAgent",
+        "file": "declarativeAgent.json"
+      }
+    ]
+  },
+  "permissions": [
+    "identity"
+  ],
+  "validDomains": []
+}
