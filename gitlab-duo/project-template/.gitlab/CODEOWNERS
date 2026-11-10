@@ -1,0 +1,7 @@
+# AI instructions and CI need a Code Owner's approval (Premium/Ultimate,
+# with "Require approval from code owners" on the protected branches).
+[AI and CI configuration]
+/AGENTS.md @your-group/maintainers
+/.gitlab/ @your-group/maintainers
+/.gitlab-ci.yml @your-group/maintainers
+/skills/ @your-group/maintainers

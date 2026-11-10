@@ -1,0 +1,14 @@
+# Execution environment for GitLab Duo flows that run on CI runners.
+# Read only from the default branch. Format: https://docs.gitlab.com/user/duo_agent_platform/flows/execution/
+setup_script:
+  - pip install -r requirements.txt pytest pytest-cov
+cache:
+  key:
+    files:
+      - requirements.txt
+  paths:
+    - .cache/pip
+network_policy:
+  allowed_domains:
+    - pypi.org
+    - files.pythonhosted.org

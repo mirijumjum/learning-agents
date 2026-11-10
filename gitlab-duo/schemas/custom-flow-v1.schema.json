@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "devassist/gitlab-duo/custom-flow-v1",
+  "title": "GitLab Duo custom flow (flow registry v1), subset used by DevAssist",
+  "description": "Written from https://docs.gitlab.com/user/duo_agent_platform/flows/custom_flows_schema/ and the flow registry v1 page (checked 2026-11-10). GitLab publishes no machine-readable schema; cross-references (prompt ids, router targets, tool names) are checked in tests/test_gitlab_duo_config.py.",
+  "type": "object",
+  "required": ["version", "environment", "components", "routers", "flow"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {"const": "v1"},
+    "environment": {"const": "ambient", "description": "Custom flows support only ambient."},
+    "coding_environment": {"enum": ["full", "none"]},
+    "components": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/component"}},
+    "prompts": {"type": "array", "items": {"$ref": "#/$defs/prompt"}},
+    "routers": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/router"}},
+    "flow": {
+      "type": "object",
+      "required": ["entry_point"],
+      "properties": {"entry_point": {"$ref": "#/$defs/name"}}
+    }
+  },
+  "$defs": {
+    "name": {"type": "string", "pattern": "^[^:.]+$"},
+    "input": {
+      "oneOf": [
+        {"type": "string", "pattern": "^(context:|conversation_history:)"},
+        {
+          "type": "object",
+          "required": ["from", "as"],
+          "additionalProperties": false,
+          "properties": {"from": {"type": "string"}, "as": {"type": "string"}, "literal": {"type": "boolean"}}
+        }
+      ]
+    },
+    "tool": {
+      "oneOf": [
+        {"type": "string"},
+        {"type": "object", "minProperties": 1, "maxProperties": 1, "additionalProperties": {"type": "object"}}
+      ]
+    },
+    "component": {
+      "type": "object",
+      "required": ["name", "type"],
+      "properties": {
+        "name": {"$ref": "#/$defs/name"},
+        "type": {"enum": ["AgentComponent", "OneOffComponent", "DeterministicStepComponent", "HumanInputComponent"]},
+        "inputs": {"type": "array", "items": {"$ref": "#/$defs/input"}},
+        "toolset": {"type": "array", "items": {"$ref": "#/$defs/tool"}},
+        "ui_log_events": {"type": "array", "items": {"type": "string"}},
+        "max_cycles": {"type": "integer", "minimum": 1}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"type": {"const": "AgentComponent"}}},
+          "then": {
+            "required": ["prompt_id"],
+            "not": {"anyOf": [{"required": ["response_schema_id"]}, {"required": ["response_schema_version"]}]}
+          }
+        },
+        {
+          "if": {"properties": {"type": {"const": "OneOffComponent"}}},
+          "then": {"required": ["prompt_id", "toolset"], "not": {"required": ["ui_role_as"]}}
+        },
+        {"if": {"properties": {"type": {"const": "DeterministicStepComponent"}}}, "then": {"required": ["tool_name"]}},
+        {"if": {"properties": {"type": {"const": "HumanInputComponent"}}}, "then": {"required": ["sends_response_to", "message_template"]}}
+      ]
+    },
+    "prompt": {
+      "type": "object",
+      "required": ["prompt_id", "name", "unit_primitives", "prompt_template"],
+      "not": {"required": ["model"]},
+      "properties": {
+        "prompt_id": {"type": "string"},
+        "name": {"type": "string"},
+        "unit_primitives": {"type": "array"},
+        "prompt_template": {
+          "type": "object",
+          "required": ["system", "user"],
+          "properties": {"system": {"type": "string"}, "user": {"type": "string"}, "placeholder": {"const": "history"}}
+        },
+        "params": {
+          "type": "object",
+          "not": {"required": ["stop"]},
+          "properties": {"timeout": {"type": "integer", "minimum": 1}}
+        }
+      }
+    },
+    "router": {
+      "type": "object",
+      "required": ["from"],
+      "oneOf": [
+        {"required": ["to"]},
+        {
+          "required": ["condition"],
+          "properties": {
+            "condition": {
+              "type": "object",
+              "required": ["input", "routes"],
+              "properties": {"input": {"type": "string"}, "routes": {"type": "object", "required": ["default_route"]}}
+            }
+          }
+        }
+      ]
+    }
+  }
+}

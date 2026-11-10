@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections import OrderedDict
 from typing import Any
 
 import httpx
@@ -13,6 +12,7 @@ from devassist.audit import RequestContext, current_request
 from devassist.gitlab import AI_BRANCH_PREFIX
 from devassist.orchestrator import DevAssist
 from devassist.specialists import AgentRefusal, Reply
+from devassist.webhooks import RecentDeliveries
 
 logger = logging.getLogger("devassist.automations")
 
@@ -21,19 +21,12 @@ class Automations:
     def __init__(self, devassist: DevAssist) -> None:
         self.devassist = devassist
         self.settings = devassist.settings
-        self._seen: OrderedDict[str, None] = OrderedDict()
+        self._deliveries = RecentDeliveries()
         self._tasks: set[asyncio.Task] = set()
 
     def is_duplicate(self, delivery_id: str) -> bool:
         """GitLab retries deliveries, and a retry must not repeat the work."""
-        if not delivery_id:
-            return False
-        if delivery_id in self._seen:
-            return True
-        self._seen[delivery_id] = None
-        if len(self._seen) > 2000:
-            self._seen.popitem(last=False)
-        return False
+        return self._deliveries.is_duplicate(delivery_id)
 
     def plan(self, event: str, payload: dict[str, Any]) -> tuple[str, dict[str, Any]] | None:
         """Decide what to do. Events from ai/* branches are ignored, or agents would trigger themselves forever."""

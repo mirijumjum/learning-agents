@@ -1,0 +1,32 @@
+{
+  "source": "https://docs.gitlab.com/user/duo_agent_platform/agents/tools/ and the flow registry v1 page",
+  "checked": "2026-11-10",
+  "ui_and_ide": [
+    "add_merge_request_reviewers", "add_new_task", "build_review_merge_request_context", "ci_linter", "confirm_vulnerability",
+    "create_branch", "create_commit", "create_epic", "create_issue", "create_issue_note", "create_merge_request",
+    "create_merge_request_diff_note", "create_merge_request_note", "create_plan", "create_vulnerability_issue",
+    "create_work_item", "create_work_item_note", "dismiss_vulnerability", "extract_lines_from_text", "get_commit",
+    "get_commit_comments", "get_commit_diff", "get_current_user", "get_downstream_pipelines", "get_epic", "get_epic_note",
+    "get_failing_bridge_jobs", "get_issue", "get_issue_note", "get_job_logs", "get_merge_request", "get_pipeline_errors",
+    "get_pipeline_failing_jobs", "get_plan", "get_project", "get_repository_file", "get_repository_files",
+    "get_security_finding_details", "get_session_context", "get_vulnerability_details", "get_wiki_page", "get_work_item",
+    "get_work_item_notes", "get_work_item_statuses", "gitlab_api_get", "gitlab_blob_search", "gitlab_commit_search",
+    "gitlab_documentation_search", "gitlab_graphql", "gitlab_group_project_search", "gitlab_issue_search",
+    "gitlab_merge_request_search", "gitlab_milestone_search", "gitlab_note_search", "gitlab__user_search",
+    "gitlab_wiki_blob_search", "link_vulnerability_to_issue", "link_vulnerability_to_merge_request",
+    "list_all_merge_request_notes", "list_commits", "list_epic_notes", "list_epics", "list_group_audit_events",
+    "list_instance_audit_events", "list_issue_notes", "list_issues", "list_merge_request_diffs", "list_mr_discussions",
+    "list_project_audit_events", "list_repository_tree", "list_security_findings", "list_vulnerabilities", "list_work_items",
+    "post_sast_fp_analysis_to_gitlab", "remove_task", "reply_to_discussion", "revert_to_detected_vulnerability",
+    "run_glql_query", "run_tests", "set_discussion_resolved", "set_task_status", "submit_mr_review", "update_epic",
+    "update_issue", "update_merge_request", "update_task_description", "update_vulnerability_severity", "update_work_item"
+  ],
+  "workspace": [
+    "create_file_with_contents", "edit_file", "find_files", "grep", "list_dir", "mkdir", "notify_me_when",
+    "read_file", "read_files", "run_command"
+  ],
+  "never_allowed_for_devassist": [
+    "update_merge_request", "run_command", "dismiss_vulnerability", "confirm_vulnerability", "remove_task",
+    "set_discussion_resolved", "submit_mr_review", "update_issue", "update_work_item", "update_epic"
+  ]
+}

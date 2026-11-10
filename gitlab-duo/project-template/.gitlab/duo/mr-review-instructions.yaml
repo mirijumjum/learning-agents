@@ -1,0 +1,23 @@
+# Custom instructions for GitLab Duo code review (Code Review Flow).
+# Format: https://docs.gitlab.com/user/duo_agent_platform/customize/review_instructions/
+instructions:
+  - name: Python production code
+    fileFilters:
+      - "src/**/*.py"
+      - "!tests/**"
+    instructions: |
+      1. Flag any change that logs personal data (emails, IPs, customer IDs, card numbers) without masking.
+      2. Flag public functions whose behaviour changed without a matching test change.
+      3. Prefer explicit error handling over bare except.
+  - name: Tests
+    fileFilters:
+      - "tests/**/*.py"
+    instructions: |
+      1. Tests must import the real modules and must not mock the code under test.
+      2. Expected values must be exact; floats use pytest.approx.
+  - name: AI branches
+    fileFilters:
+      - "**/*"
+    instructions: |
+      If the source branch starts with ai/, check that the change matches its purpose:
+      ai/tests-* only adds tests, ai/docs-* only changes documentation and comments.

@@ -1,0 +1,55 @@
+# Example pipeline for a Python project that uses the DevAssist flows on GitLab Duo.
+# - unit-tests: the real test results and coverage that the test flow's merge requests show.
+# - ai-branch-guard: rejects AI branches that change more than they are allowed to.
+# Validated against GitLab's CI JSON schema (see docs/ALTERNATIVA-gitlab-duo.md).
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+
+stages:
+  - test
+
+default:
+  image: python:3.12
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  # Usernames of the GitLab Duo flow service accounts (ai-<flow>-<group>) and of @GitLabDuo.
+  AI_BOT_PATTERN: '^(ai-.+|duo-.+|gitlabduo)$'
+
+unit-tests:
+  stage: test
+  cache:
+    key:
+      files:
+        - requirements.txt
+    paths:
+      - .cache/pip
+  script:
+    - pip install -r requirements.txt pytest pytest-cov
+    - pytest --cov=src --cov-report=term --cov-report=xml:coverage.xml --junitxml=report.xml
+  # Shown on the merge request, together with the change against the target branch.
+  # Regex for pytest-cov from https://docs.gitlab.com/ci/testing/code_coverage/coverage_reporting/
+  coverage: '/TOTAL.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+  artifacts:
+    when: always
+    reports:
+      junit: report.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+
+ai-branch-guard:
+  stage: test
+  needs: []
+  variables:
+    GIT_DEPTH: "0"
+  script:
+    - python .gitlab/ci/ai_branch_guard.py
+  rules:
+    - if: $CI_COMMIT_REF_NAME =~ /^ai\//
+    - if: $GITLAB_USER_LOGIN =~ /^(ai-|duo-)/

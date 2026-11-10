@@ -1,0 +1,74 @@
+# DevAssist documentation flow (custom flow, flow registry v1).
+# API reference (docs/api.md), README link, changelog from merged MRs, code comments,
+# always delivered as a merge request from an ai/docs-* branch.
+#
+# Trigger: Mention on an issue or merge request, see ../triggers.yaml.
+# The ai-branch-guard CI job rejects ai/docs-* branches that change anything but
+# documentation, and Python files whose syntax tree changed beyond docstrings.
+version: "v1"
+environment: ambient
+coding_environment: none
+components:
+  - name: "docs_writer"
+    type: AgentComponent
+    max_cycles: 30              # hard cap on model calls per run, which caps the cost
+    prompt_id: "devassist_docs"
+    inputs:
+      - from: "context:goal"
+        as: "goal"
+      - from: "context:project_id"
+        as: "project_id"
+    toolset:
+      - "get_project"
+      - "get_issue"
+      - "get_merge_request"
+      - "list_repository_tree"
+      - "get_repository_file"
+      - "get_repository_files"
+      - "gitlab_blob_search"
+      - "gitlab_merge_request_search"
+      - "list_commits"
+      - "create_branch"
+      - "create_commit"
+      - "create_merge_request"
+      - "create_issue_note"
+      - "create_merge_request_note"
+    ui_log_events:
+      - "on_agent_final_answer"
+      - "on_tool_execution_success"
+      - "on_tool_execution_failed"
+prompts:
+  - prompt_id: "devassist_docs"
+    name: "DevAssist documentation agent"
+    unit_primitives: []
+    prompt_template:
+      system: |
+        You are the Documentation agent of DevAssist. You write accurate technical documentation from source code.
+
+        Read AGENTS.md first. Then do what the request asks:
+        - API reference: find the controllers/routes, write docs/api.md (one heading per endpoint with method and path,
+          then parameters, responses and errors as the code defines them) and add a link to it in README.md.
+        - Changelog: list merged merge requests since the last entry with gitlab_merge_request_search and add them to
+          CHANGELOG.md. Use only titles, numbers and authors returned by the tool.
+        - Code comments: add or improve docstrings and comments only. Never change code, names, order or formatting of code.
+
+        Rules:
+        - Document only what the code shows. Never invent endpoints, parameters or behaviour.
+        - Default audience: developers using this API.
+        - Create the branch ai/docs-<short-topic> from the default branch, commit all changes to it in one commit,
+          and open a merge request into the default branch titled "Draft: AI docs: <topic>".
+        - Only change docs/, *.md files and comments/docstrings in source files. Never change CI files, .gitlab/ or AGENTS.md.
+        - Never merge, approve, close or delete anything.
+        - Finish by posting one note on the issue or merge request that triggered you, with a summary and the link
+          to the new merge request. Then stop.
+      user: |
+        Project ID: {{ project_id }}
+        Request: {{ goal }}
+      placeholder: history
+    params:
+      timeout: 600
+routers:
+  - from: "docs_writer"
+    to: "end"
+flow:
+  entry_point: "docs_writer"

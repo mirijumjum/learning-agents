@@ -7,6 +7,7 @@
     devassist eval                the release test set
     devassist usage               tokens, cost and feedback so far
     devassist package             build the Teams app zip
+    devassist duo-bridge          forward GitLab Duo results to a Teams channel
 """
 
 from __future__ import annotations
@@ -136,6 +137,19 @@ def _package(args: argparse.Namespace) -> int:
     return 0
 
 
+def _duo_bridge(args: argparse.Namespace) -> int:
+    from aiohttp import web
+
+    from devassist.duo_bridge import BridgeSettings, create_bridge_app
+
+    settings = BridgeSettings.from_env()
+    if not settings.webhook_secret:
+        raise ConfigError("Set GITLAB_WEBHOOK_SECRET: the bridge refuses unsigned webhooks.")
+    print(f"GitLab Duo → Teams bridge on http://{args.host}:{args.port}/webhooks/gitlab  teams={'set' if settings.teams_url else 'NOT SET'}", flush=True)
+    web.run_app(create_bridge_app(settings), host=args.host, port=args.port, print=None)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="devassist", description="Development agents for tests, docs, GitLab and root-cause analysis.")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -164,6 +178,9 @@ def build_parser() -> argparse.ArgumentParser:
     package.add_argument("--terms-url", required=True)
     package.add_argument("--version", default="1.0.0")
     package.add_argument("--output", default="dist/devassist-teams.zip")
+    bridge = command("duo-bridge", _duo_bridge, "Forward GitLab Duo results to a Teams channel.")
+    bridge.add_argument("--host", default="127.0.0.1")
+    bridge.add_argument("--port", type=int, default=3979)
     return parser
 
 

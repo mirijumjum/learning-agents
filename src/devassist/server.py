@@ -8,7 +8,6 @@ carry a valid Bot Service token.
 from __future__ import annotations
 
 import asyncio
-import hmac
 import logging
 import os
 from typing import Any
@@ -23,6 +22,7 @@ from microsoft_agents.hosting.core import AgentApplication, AgentAuthConfigurati
 from devassist.audit import RequestContext, configure_telemetry
 from devassist.automations import Automations
 from devassist.orchestrator import DevAssist
+from devassist.webhooks import check_gitlab_secret, delivery_id
 
 logger = logging.getLogger("devassist.server")
 _LOOPBACK = ("127.0.0.1", "localhost", "::1")
@@ -131,13 +131,10 @@ def create_app(devassist: DevAssist, env: dict[str, str] | None = None, connecti
         return response if response is not None else Response(status=202)
 
     async def gitlab_webhook(request: Request) -> Response:
-        secret = settings.gitlab_webhook_secret
-        if not secret:
-            return json_response({"error": "webhooks are disabled: GITLAB_WEBHOOK_SECRET is not set"}, status=503)
-        if not hmac.compare_digest(request.headers.get("X-Gitlab-Token", "").encode(), secret.encode()):
-            return json_response({"error": "unauthorized"}, status=401)
-        delivery = request.headers.get("Idempotency-Key") or request.headers.get("X-Gitlab-Event-UUID", "")
-        if automations.is_duplicate(delivery):
+        rejected = check_gitlab_secret(request.headers, settings.gitlab_webhook_secret)
+        if rejected:
+            return json_response({"error": rejected[1]}, status=rejected[0])
+        if automations.is_duplicate(delivery_id(request.headers)):
             return json_response({"status": "duplicate"}, status=200)
         try:
             payload: dict[str, Any] = await request.json()

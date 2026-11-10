@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "devassist/gitlab-duo/mcp",
+  "title": ".gitlab/duo/mcp.json (MCP clients in the IDE and the Duo CLI)",
+  "description": "From https://docs.gitlab.com/user/gitlab_duo/model_context_protocol/mcp_clients/ (checked 2026-11-10).",
+  "type": "object",
+  "required": ["mcpServers"],
+  "properties": {
+    "mcpServers": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": {"enum": ["stdio", "http", "sse"]},
+          "command": {"type": "string"},
+          "args": {"type": "array", "items": {"type": "string"}},
+          "env": {"type": "object", "additionalProperties": {"type": "string"}},
+          "cwd": {"type": "string"},
+          "url": {"type": "string"},
+          "approvedTools": {"oneOf": [{"type": "boolean"}, {"type": "array", "items": {"type": "string"}}]}
+        },
+        "allOf": [
+          {"if": {"properties": {"type": {"const": "stdio"}}}, "then": {"required": ["command"]}},
+          {"if": {"properties": {"type": {"enum": ["http", "sse"]}}}, "then": {"required": ["url"]}}
+        ]
+      }
+    }
+  }
+}

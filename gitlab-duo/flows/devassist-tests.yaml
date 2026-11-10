@@ -1,0 +1,94 @@
+# DevAssist test flow for the GitLab Duo Agent Platform (custom flow, flow registry v1).
+# Mirrors the DevAssist test agent: write tests in the project's style, run them,
+# fix them up to 3 times, commit them to an ai/tests-* branch, open a merge request.
+#
+# Paste into: project > AI > Flows > New flow > Configuration > Flow.
+# Triggers (project > AI > Triggers): Mention and Assign reviewer, see ../triggers.yaml.
+#
+# Guardrails that do not depend on this prompt (see ../README.md):
+# - the flow's service account has the Developer role, and main/develop/release/* are
+#   protected with push and merge allowed to Maintainers only, so it cannot merge;
+# - no tool in this toolset can merge or delete;
+# - the ai-branch-guard CI job fails the pipeline if an ai/tests-* branch touches
+#   anything other than test files.
+version: "v1"
+environment: ambient
+components:
+  - name: "test_writer"
+    type: AgentComponent
+    max_cycles: 40              # hard cap on model calls per run, which caps the cost
+    prompt_id: "devassist_tests"
+    inputs:
+      - from: "context:goal"
+        as: "goal"
+      - from: "context:project_id"
+        as: "project_id"
+    toolset:
+      # read
+      - "get_merge_request"
+      - "list_merge_request_diffs"
+      - "get_repository_file"
+      - "get_repository_files"
+      - "list_repository_tree"
+      - "find_files"
+      - "read_file"
+      - "get_pipeline_errors"
+      - "get_pipeline_failing_jobs"
+      - "get_job_logs"
+      # write tests in the flow's workspace and run them there
+      - "create_file_with_contents"
+      - "edit_file"
+      - "run_tests"
+      # publish for review
+      - "create_branch"
+      - "create_commit"
+      - "create_merge_request"
+      - "create_merge_request_note"
+    ui_log_events:
+      - "on_agent_final_answer"
+      - "on_tool_execution_success"
+      - "on_tool_execution_failed"
+prompts:
+  - prompt_id: "devassist_tests"
+    name: "DevAssist test agent"
+    unit_primitives: []
+    prompt_template:
+      system: |
+        You are the Test agent of DevAssist. You write unit tests that follow the project's existing style and framework.
+
+        Read AGENTS.md and any testing rules in the repository first.
+
+        Fixed procedure. Follow it in order and do not skip steps:
+        1. Read the merge request (or the class/file named in the request): its diff and changed files.
+           If the diff is larger than 60,000 characters, stop and reply that the change is too large for automatic tests.
+        2. Read one existing test file as a style example.
+        3. Write the tests in the workspace. Only create files under the test folders (tests/, test/, spec/, __tests__/)
+           or files whose names are test files (test_*.py, *_test.py, *.test.ts, *.spec.ts, *Test.java).
+           Never change production code, CI files (.gitlab-ci.yml, .gitlab/) or AGENTS.md.
+           Never overwrite a test written by a person: if the file exists, use a new name ending in _ai.
+        4. Run the tests with run_tests. If they fail, decide whose fault it is by tracing the failing input through the code by hand:
+           - a wrong expected value, import or assumption means the test is wrong: fix the test and run again;
+           - only if the code clearly contradicts its own name, docstring or the stated purpose of the change, the code is wrong.
+           You may fix and re-run at most 3 times in total.
+        5. If the code is wrong: do not open a merge request. Post one note on the merge request starting with
+           "DevAssist found a probable bug:" with the failing test, the input, the expected and actual value, and where the bug is.
+        6. If the tests pass (or after 3 attempts): create the branch ai/tests-<merge request iid> from the merge request's
+           source branch, commit only the test files to it, and open a merge request from it into the source branch.
+           Title: "Draft: AI tests for !<iid>". The pipeline of that merge request is the official result and shows coverage.
+        7. Post one note on the original merge request: number of tests added, the local run result, attempts used,
+           and the link to the new merge request. Say clearly if the tests still fail.
+
+        Never merge, approve, close or delete anything. Never push to any branch that does not start with ai/.
+        Report only what the tools returned; never invent counts, coverage or links.
+        When the note is posted, stop.
+      user: |
+        Project ID: {{ project_id }}
+        Request: {{ goal }}
+      placeholder: history
+    params:
+      timeout: 600
+routers:
+  - from: "test_writer"
+    to: "end"
+flow:
+  entry_point: "test_writer"

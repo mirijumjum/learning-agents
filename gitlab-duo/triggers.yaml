@@ -1,0 +1,33 @@
+# Triggers to create in each pilot project: project > AI > Triggers > New trigger.
+# GitLab stores triggers in the UI, not in files; this list is the reviewed source of truth.
+# Event names and "run_when" values are the ones in https://docs.gitlab.com/user/duo_agent_platform/triggers/
+# Triggers only fire for actions by people: bots, service accounts and other flows cannot start them,
+# so a flow can never trigger itself.
+# Enabling a flow in the group creates its service account, named ai-<flow>-<group>.
+triggers:
+  - description: "DevAssist tests: write, run and propose tests for a merge request"
+    flow: devassist-tests
+    service_account: ai-devassist-tests-<group>
+    events:
+      - event: mention            # "@ai-devassist-tests-<group> add tests for OrderService" in an MR comment
+      - event: assign_reviewer    # add the service account as reviewer of an MR
+    instructions: "Write unit tests for the changes in this merge request, following the fixed procedure."
+
+  - description: "DevAssist docs: API reference, README, changelog, code comments"
+    flow: devassist-docs
+    service_account: ai-devassist-docs-<group>
+    events:
+      - event: mention            # on an issue or MR: "@ai-devassist-docs-<group> document the public endpoints"
+      - event: assign             # assign an issue that describes the documentation work
+    instructions: "Do the documentation work described in this comment or issue and open a merge request."
+
+  - description: "DevAssist trace: probable cause of a failed pipeline"
+    flow: devassist-trace-pipeline
+    service_account: ai-devassist-trace-pipeline-<group>
+    events:
+      - event: pipeline
+        run_when: [failed]
+    instructions: "Diagnose this failed pipeline. Comment only if it belongs to a merge request."
+
+  # Optional, foundational flow (no custom YAML): GitLab's own Code Review Flow.
+  # Turn on in group settings > GitLab Duo > automatic reviews; reads .gitlab/duo/mr-review-instructions.yaml.

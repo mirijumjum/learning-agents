@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "app-logs": {
+      "type": "http",
+      "url": "https://logs-mcp.example.internal/mcp",
+      "approvedTools": ["search_logs", "count_errors"]
+    }
+  }
+}
