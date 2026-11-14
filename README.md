@@ -41,6 +41,11 @@ and run them**, looping back with feedback until the tests pass.
 > interlocks, alarms), with simulated field signals, event publishing, a Modbus TCP server and agents that work
 > next to the PLC on Ollama. See [docs/PLC-SIMULADOR.md](docs/PLC-SIMULADOR.md) (in Spanish).
 
+> **New: game studio design.** A team of agents that takes a Godot game from idea to itch.io: idea debate,
+> design, code with review and tests, generated art and music, balance simulations and automated playtests,
+> with a plan to try it during the Microsoft 365 Copilot trial. See
+> [docs/ESTUDIO-VIDEOJUEGOS.md](docs/ESTUDIO-VIDEOJUEGOS.md) (in Spanish).
+
 ## Table of contents
 
 - [Quick start](#quick-start)
