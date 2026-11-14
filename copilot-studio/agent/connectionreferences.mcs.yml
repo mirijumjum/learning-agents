@@ -1,0 +1,9 @@
+# Connection references used by the MCP tool and the agent flow. Both connectors are created
+# from copilot-studio/connector (see docs/ALTERNATIVA-copilot-studio.md).
+connectionReferences:
+  - connectionReferenceLogicalName: new_devassist.shared_devassist-mcp
+    connectorId: /providers/Microsoft.PowerApps/apis/shared_devassist-mcp
+    displayName: DevAssist MCP
+  - connectionReferenceLogicalName: new_devassist.shared_devassist-rest
+    connectorId: /providers/Microsoft.PowerApps/apis/shared_devassist-rest
+    displayName: DevAssist REST

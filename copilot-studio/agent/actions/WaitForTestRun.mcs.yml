@@ -1,0 +1,24 @@
+# The agent flow in workflows/WaitForTestRun as a tool. It waits for GitLab CI (minutes) without
+# holding the conversation, and calls the agent back in Teams when CI finishes.
+mcs.metadata:
+  componentName: WaitForTestRun
+  description: Waits until the CI pipeline of a test session finishes and returns its result.
+kind: TaskDialog
+inputs:
+  - kind: AutomaticTaskInput
+    propertyName: text
+    name: sessionId
+    description: The sessionId returned by StartTestSession.
+modelDisplayName: WaitForTestRun
+modelDescription: >-
+  Call right after SubmitTestFile. Waits until GitLab CI finishes the test run of the session
+  (it can take several minutes) and returns the result as reported by CI (status, counts,
+  masked failed log, next step).
+outputs:
+  - propertyName: status
+  - propertyName: result
+action:
+  kind: InvokeFlowTaskAction
+  # Filled in when the flow is created in the environment.
+  flowId: 00000000-0000-0000-0000-000000000000
+outputMode: All

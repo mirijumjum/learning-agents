@@ -31,6 +31,12 @@ and run them**, looping back with feedback until the tests pass.
 > Microsoft Teams. It runs free on Ollama and is ready to move to Azure OpenAI (GPT-5), Teams and Microsoft 365 Copilot.
 > See [docs/DEVASSIST.md](docs/DEVASSIST.md).
 
+> **New: learning Microsoft 365 Copilot.** What a Microsoft 365 Copilot account lets you build for
+> development work (Agent Builder, Workflows, Copilot Studio, Agents Toolkit, plugins with MCP and skills),
+> with a step-by-step learning path. See [docs/M365-COPILOT-APRENDER.md](docs/M365-COPILOT-APRENDER.md) (in Spanish).
+> To try it hands-on with free trials (DevAssist in a real Teams, Teams Workflows, and MCP from VS Code,
+> Visual Studio or Claude Code), see [docs/FIN-DE-SEMANA-M365.md](docs/FIN-DE-SEMANA-M365.md) (in Spanish).
+
 > **New: plcsim.** A PLC simulator for learning how PLCs work (scan cycle, IEC 61131-3 blocks, ladder rungs,
 > interlocks, alarms), with simulated field signals, event publishing, a Modbus TCP server and agents that work
 > next to the PLC on Ollama. See [docs/PLC-SIMULADOR.md](docs/PLC-SIMULADOR.md) (in Spanish).

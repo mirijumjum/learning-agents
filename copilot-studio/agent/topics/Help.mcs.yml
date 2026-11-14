@@ -1,0 +1,27 @@
+# A classic topic: fixed text, billed as a classic answer (1 credit) instead of a generative one.
+mcs.metadata:
+  componentName: Help
+  description: Explains what DevAssist can do.
+kind: AdaptiveDialog
+modelDescription: Use when the user asks what DevAssist can do, how to use it, or says help.
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent:
+    displayName: Help
+    triggerQueries:
+      - help
+      - what can you do
+      - how do I use DevAssist
+      - qué puedes hacer
+      - ayuda
+  actions:
+    - kind: SendActivity
+      id: sendActivity_help
+      activity: |-
+        I can help with your GitLab projects:
+        - **Tests**: "Generate unit tests for OrderService in MR !231 of payments-api". I run them in GitLab CI, fix my own mistakes up to 3 times and open an MR.
+        - **Docs**: "Document the public endpoints of customer-portal and open an MR", or ask for a changelog or code comments.
+        - **Git**: create branches, list MRs assigned to you, pipeline status, comments and issues.
+        - **Traces**: "Why did checkout fail yesterday between 17:00 and 18:00?" or "Why is pipeline #5512 red?".
+        I never merge, deploy or delete: every change goes to an ai/* branch and a merge request for a person to review.

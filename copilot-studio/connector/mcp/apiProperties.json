@@ -1,0 +1,23 @@
+{
+  "properties": {
+    "connectionParameters": {
+      "api_key": {
+        "type": "securestring",
+        "uiDefinition": {
+          "displayName": "API key",
+          "description": "The DevAssist backend API key (from Key Vault).",
+          "tooltip": "Sent in the X-API-Key header",
+          "constraints": {
+            "tabIndex": 2,
+            "clearText": false,
+            "required": "true"
+          }
+        }
+      }
+    },
+    "iconBrandColor": "#4F6BED",
+    "capabilities": [],
+    "publisher": "DevAssist owners",
+    "stackOwner": "DevAssist owners"
+  }
+}

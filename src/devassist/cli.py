@@ -7,6 +7,8 @@
     devassist eval                the release test set
     devassist usage               tokens, cost and feedback so far
     devassist package             build the Teams app zip
+    devassist notify-teams        send a test card to the Teams Workflows webhook
+    devassist simulate-webhook    send a GitLab event to a running `devassist serve`
 """
 
 from __future__ import annotations
@@ -15,6 +17,7 @@ import argparse
 import asyncio
 import json
 import sys
+import uuid
 from dataclasses import replace
 from pathlib import Path
 
@@ -136,6 +139,47 @@ def _package(args: argparse.Namespace) -> int:
     return 0
 
 
+def _notify_teams(args: argparse.Namespace) -> int:
+    from devassist.automations import post_to_teams
+
+    url = args.url or _settings(args).teams_notify_url
+    if not url:
+        raise ValueError("Set TEAMS_NOTIFY_WEBHOOK_URL in .env.devassist, or pass --url.")
+    status = asyncio.run(post_to_teams(url, args.title, args.text))
+    print(f"Teams accepted the card (HTTP {status}). It can take a few seconds to show up in the channel.")
+    return 0
+
+
+# Events that match the GitLab stand-in's sample data, so the agents have real work to do.
+SAMPLE_EVENTS = {
+    "pipeline-failed": ("Pipeline Hook", {
+        "object_kind": "pipeline", "project": {"path_with_namespace": "acme/payments-api"},
+        "object_attributes": {"id": 5512, "status": "failed", "ref": "develop"}, "merge_request": None,
+    }),
+    "mr-opened": ("Merge Request Hook", {
+        "object_kind": "merge_request", "project": {"path_with_namespace": "acme/payments-api"},
+        "object_attributes": {"action": "open", "iid": 231, "source_branch": "feature/order-discount", "target_branch": "develop"},
+    }),
+    "mr-merged": ("Merge Request Hook", {
+        "object_kind": "merge_request", "project": {"path_with_namespace": "acme/payments-api"},
+        "object_attributes": {"action": "merge", "iid": 231, "source_branch": "feature/order-discount", "target_branch": "develop"},
+    }),
+}
+
+
+def _simulate_webhook(args: argparse.Namespace) -> int:
+    settings = _settings(args)
+    if not settings.gitlab_webhook_secret:
+        raise ValueError("Set GITLAB_WEBHOOK_SECRET in .env.devassist (and restart `devassist serve`).")
+    event, payload = SAMPLE_EVENTS[args.event]
+    headers = {"X-Gitlab-Token": settings.gitlab_webhook_secret, "X-Gitlab-Event": event, "Idempotency-Key": str(uuid.uuid4())}
+    response = httpx.post(f"{args.url.rstrip('/')}/webhooks/gitlab", json=payload, headers=headers, timeout=10)
+    print(f"HTTP {response.status_code}: {response.text}")
+    if response.status_code == 200 and "ignored" in response.text:
+        print("Ignored: turn on the matching DEVASSIST_AUTO_* setting and restart `devassist serve`.")
+    return 0 if response.status_code in (200, 202) else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="devassist", description="Development agents for tests, docs, GitLab and root-cause analysis.")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -164,6 +208,13 @@ def build_parser() -> argparse.ArgumentParser:
     package.add_argument("--terms-url", required=True)
     package.add_argument("--version", default="1.0.0")
     package.add_argument("--output", default="dist/devassist-teams.zip")
+    notify = command("notify-teams", _notify_teams, "Send a test card to the Teams Workflows webhook.")
+    notify.add_argument("--url", default="", help="Overrides TEAMS_NOTIFY_WEBHOOK_URL.")
+    notify.add_argument("--title", default="DevAssist · test")
+    notify.add_argument("--text", default="If you can read this in the channel, the Teams workflow works.")
+    simulate = command("simulate-webhook", _simulate_webhook, "Send a sample GitLab event to a running server.")
+    simulate.add_argument("event", choices=sorted(SAMPLE_EVENTS))
+    simulate.add_argument("--url", default="http://127.0.0.1:3978", help="Where `devassist serve` listens.")
     return parser
 
 

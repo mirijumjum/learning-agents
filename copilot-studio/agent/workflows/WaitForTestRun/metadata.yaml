@@ -1,0 +1,9 @@
+name: WaitForTestRun
+description: >-
+  Agent flow. Polls GetTestRun (each call waits up to 25 s on the backend) until the session's CI
+  pipeline is no longer running, then responds to the agent. Turn on "Asynchronous response"
+  in the Respond to the agent action settings so it can run longer than two minutes; the
+  callback is supported in Teams, not in Microsoft 365 Copilot.
+trigger: When an agent calls the flow
+connectionReferences:
+  - new_devassist.shared_devassist-rest

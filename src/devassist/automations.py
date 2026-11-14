@@ -15,6 +15,43 @@ from devassist.orchestrator import DevAssist
 from devassist.specialists import AgentRefusal, Reply
 
 logger = logging.getLogger("devassist.automations")
+_TITLES = {"tests": "tests for a new MR", "changelog": "changelog", "trace": "failed pipeline"}
+# Teams messages are limited to about 28 KB; leave room for the card around the text.
+_MAX_CARD_TEXT = 20000
+
+
+def teams_card(title: str, text: str) -> dict[str, Any]:
+    """The body that a Teams Workflows webhook ("When a Teams webhook request is received") expects.
+
+    The old Office 365 connector format ({"text": ...}) is retired: Workflows posts the
+    Adaptive Cards found in "attachments" and ignores anything else.
+    """
+    if len(text) > _MAX_CARD_TEXT:
+        text = text[:_MAX_CARD_TEXT] + "\n\n… (truncated)"
+    return {
+        "type": "message",
+        "attachments": [{
+            "contentType": "application/vnd.microsoft.card.adaptive",
+            "contentUrl": None,
+            "content": {
+                "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                "type": "AdaptiveCard",
+                "version": "1.4",
+                "body": [
+                    {"type": "TextBlock", "text": title, "weight": "Bolder", "size": "Medium", "wrap": True},
+                    {"type": "TextBlock", "text": text, "wrap": True},
+                ],
+            },
+        }],
+    }
+
+
+async def post_to_teams(url: str, title: str, text: str) -> int:
+    """Post a card to a Teams Workflows webhook. Returns the HTTP status (Workflows answers 202)."""
+    async with httpx.AsyncClient(timeout=20) as http:
+        response = await http.post(url, json=teams_card(title, text))
+        response.raise_for_status()
+        return response.status_code
 
 
 class Automations:
@@ -54,11 +91,15 @@ class Automations:
                 return "trace", {"project": project, "pipeline_id": attributes["id"], "iid": merge_request.get("iid")}
         return None
 
-    async def _notify_teams(self, text: str) -> None:
+    async def _notify_teams(self, title: str, text: str) -> None:
+        """A failed notice is logged, not raised: the work itself is already done and commented."""
         if not self.settings.teams_notify_url:
             return
-        async with httpx.AsyncClient(timeout=20) as http:
-            await http.post(self.settings.teams_notify_url, json={"text": text})
+        try:
+            await post_to_teams(self.settings.teams_notify_url, title, text)
+        except httpx.HTTPError as exc:
+            self.devassist.audit.event("error", error=f"Teams notification failed: {exc}"[:500])
+            logger.warning("Teams notification failed: %s", exc)
 
     async def execute(self, kind: str, args: dict[str, Any]) -> Reply:
         context = RequestContext(user="gitlab-webhook", source="webhook", conversation_id=f"webhook:{kind}")
@@ -77,7 +118,7 @@ class Automations:
                 reply.text = reply.text.replace("\n\nSay **open the issue** and I'll file this in GitLab.", "")
             if args.get("iid"):
                 await self.devassist.gitlab.comment_on_merge_request(project, args["iid"], f"**DevAssist**\n\n{reply.render()}")
-            await self._notify_teams(f"DevAssist ({project}): {reply.render()}")
+            await self._notify_teams(f"DevAssist · {_TITLES.get(kind, kind)} · {project}", reply.render())
             return reply
         except AgentRefusal as exc:
             reply = Reply(str(exc))

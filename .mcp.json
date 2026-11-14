@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "devassist": {
+      "type": "http",
+      "url": "http://127.0.0.1:3981/mcp",
+      "headers": {
+        "X-DevAssist-Requester": "dev@acme.test"
+      }
+    }
+  }
+}
