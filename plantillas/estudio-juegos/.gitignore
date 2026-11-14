@@ -1,0 +1,11 @@
+# Godot: caché del editor (los .import junto a los assets sí se guardan)
+godot/.godot/
+# Builds exportados
+build/
+# Capturas y vídeos del playtest (los informes .md sí se guardan)
+estudio/informes/playtest/**/*.png
+estudio/informes/playtest/**/*.avi
+# Última respuesta completa de cada agente (solo para depurar)
+estudio/informes/salidas/
+# Python
+__pycache__/

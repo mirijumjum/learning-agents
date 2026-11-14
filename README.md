@@ -44,7 +44,9 @@ and run them**, looping back with feedback until the tests pass.
 > **New: game studio design.** A team of agents that takes a Godot game from idea to itch.io: idea debate,
 > design, code with review and tests, generated art and music, balance simulations and automated playtests,
 > with a plan to try it during the Microsoft 365 Copilot trial. See
-> [docs/ESTUDIO-VIDEOJUEGOS.md](docs/ESTUDIO-VIDEOJUEGOS.md) (in Spanish).
+> [docs/ESTUDIO-VIDEOJUEGOS.md](docs/ESTUDIO-VIDEOJUEGOS.md) (in Spanish). A step-by-step guide that works
+> offline (Ollama, Godot and plain Python) is in [docs/ESTUDIO-VIDEOJUEGOS-GUIA.md](docs/ESTUDIO-VIDEOJUEGOS-GUIA.md),
+> with a ready-to-copy project in [plantillas/estudio-juegos/](plantillas/estudio-juegos/).
 
 ## Table of contents
 

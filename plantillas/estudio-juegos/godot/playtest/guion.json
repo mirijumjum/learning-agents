@@ -1,0 +1,11 @@
+{
+  "descripcion": "Guion de ejemplo: a 60 fotogramas por segundo, 600 fotogramas son 10 segundos. Cambia las acciones por las del GDD.",
+  "duracion": 600,
+  "capturas_cada": 100,
+  "eventos": [
+    {"frame": 60, "accion": "ui_right", "pulsado": true},
+    {"frame": 120, "accion": "ui_right", "pulsado": false},
+    {"frame": 180, "accion": "ui_accept", "pulsado": true},
+    {"frame": 190, "accion": "ui_accept", "pulsado": false}
+  ]
+}

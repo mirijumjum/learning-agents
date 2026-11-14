@@ -201,33 +201,43 @@ escribir, y todo queda en git.
 ```
 mi-juego/
 ├── estudio/
+│   ├── agentes/              # Instrucciones de cada agente (nadie las modifica salvo la persona)
+│   ├── gustos.md             # La persona
 │   ├── concepto/
 │   │   ├── ideas.md          # Ideadores
 │   │   ├── debate.md         # Ideadores
-│   │   └── decision.md       # Juez + elección de la persona
+│   │   └── decision.md       # Juez
+│   ├── decisiones.md         # Las tres decisiones de la persona
 │   ├── gdd.md                # Game Designer
 │   ├── guia-estilo.md        # Director de arte
-│   ├── paleta.png
-│   ├── backlog/              # Product Owner (si no se usa Planner)
-│   ├── decisiones.md         # Archivista
+│   ├── paleta.txt            # Director de arte
+│   ├── sprites/              # Grafista: sprites como texto
+│   ├── audio/                # Compositor: música y efectos como texto
+│   ├── backlog/              # Product Owner: una historia por archivo
+│   ├── registro.md           # Archivista: cada paso del estudio
 │   └── informes/
 │       ├── revision/         # Revisor
-│       ├── balance/          # Economista (CSV + resumen)
-│       └── playtest/         # Playtester (capturas, vídeos, informe)
+│       ├── arte/             # Sprites ampliados y revisión del director de arte
+│       ├── balance/          # Simulaciones + informe del economista
+│       └── playtest/         # Capturas e informe del playtester
 ├── godot/
 │   ├── project.godot
 │   ├── scenes/               # Desarrollador
-│   ├── scripts/              # Desarrollador
-│   ├── data/                 # Diseñador de contenido (.tres / JSON)
-│   └── assets/
-│       ├── sprites/          # Gráficos
-│       ├── music/            # Compositor
-│       └── sfx/              # Efectos
-├── tests/                    # Tester (gdUnit4 o GUT)
-├── sim/                      # Economista: simulaciones sin interfaz
-├── playtest/                 # Playtester: guiones de entradas
-└── tools/                    # Orquestador, build, export, subida a itch.io
+│   ├── scripts/              # Desarrollador: lógica en clases puras
+│   ├── data/                 # Diseñador de contenido (JSON)
+│   ├── assets/               # PNG y WAV generados por las herramientas
+│   ├── tests/                # Tester (GUT)
+│   ├── sim/                  # Simulaciones sin interfaz para el economista
+│   └── playtest/             # Autoload y guion de entradas del playtest
+└── tools/                    # Orquestador y herramientas (Python, sin dependencias)
 ```
+
+Los tests, las simulaciones y el playtest van dentro de `godot/` porque Godot solo puede cargar archivos
+de su propio proyecto (`res://`).
+
+Esta estructura está lista para copiar en [plantillas/estudio-juegos/](../plantillas/estudio-juegos/), y
+[ESTUDIO-VIDEOJUEGOS-GUIA.md](ESTUDIO-VIDEOJUEGOS-GUIA.md) explica cómo usarla paso a paso, con o sin
+internet.
 
 ## 9. Qué corre en Microsoft 365 y qué en local
 
